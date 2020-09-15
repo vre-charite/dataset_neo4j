@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neo4j
+  namespace: utility
+  labels:
+    app: neo4j
+    env: charite
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: neo4j
+      env: charite
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 33%
+  template:
+    metadata:
+      labels:
+        app: neo4j
+        env: charite
+    spec:
+      containers:
+        - name: neo4j
+          image: 10.32.42.225:5000/neo4j:<VERSION>
+          ports:
+            - containerPort: 5062
+          env:
+          - name: env
+            value: "charite"
+          - name: NEO4J_USER
+            valueFrom:
+              secretKeyRef:
+                name: neo4j-db
+                key: username
+          - name: NEO4J_PASS
+            valueFrom:
+              secretKeyRef:
+                name: neo4j-db
+                key: password
+          readinessProbe:
+            tcpSocket:
+              port: 5062
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "1000Mi"
+              cpu: "1"
+            limits:
+              memory: "1000Mi"
+              cpu: "1"
+      nodeSelector:
+        namespace: utility
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neo4j
+  namespace: utility
+  labels:
+    app: neo4j
+    env: charite
+spec:
+  ports:
+  - name: http
+    port: 5062
+    targetPort: 5062
+    nodeport:
+  selector:
+    app: neo4j
+    env: charite
+  type: ClusterIP

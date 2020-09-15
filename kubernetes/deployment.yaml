@@ -32,15 +32,17 @@ spec:
           - name: env
             value: "charite"
           - name: NEO4J_USER
-            valueFrom:
-              secretKeyRef:
-                name: neo4j-db
-                key: username
+            value: "neo4j"
+#            valueFrom:
+#              secretKeyRef:
+#                name: neo4j-db
+#                key: username
           - name: NEO4J_PASS
-            valueFrom:
-              secretKeyRef:
-                name: neo4j-db
-                key: password
+            value: "neo4j-jrjmfa9svvC"
+#            valueFrom:
+#              secretKeyRef:
+#                name: neo4j-db
+#                key: password
           readinessProbe:
             tcpSocket:
               port: 5062

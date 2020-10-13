@@ -32,13 +32,11 @@ spec:
           - name: env
             value: "charite"
           - name: NEO4J_USER
-#            value: "neo4j"
             valueFrom:
               secretKeyRef:
                 name: neo4j-db
                 key: username
           - name: NEO4J_PASS
-#            value: "neo4j-jrjmfa9svvC"
             valueFrom:
               secretKeyRef:
                 name: neo4j-db

@@ -18,35 +18,61 @@ for x in required_parameters:
 neo4j_connection = GraphDatabase.driver(ConfigClass.NEO4J_URL, 
 	auth=(ConfigClass.NEO4J_USER, ConfigClass.NEO4J_PASS),encrypted=False)
 
+page_description="Neo4j is the GraphDB modeling used in VRE project. " \
+				 "As of the Release 0.1.0, there are 2 different types" \
+				 " of node that are used to model the projects, users, and the " \
+				 "relationships between them. " \
+				 "Once a project is created from the portal, a project node, " \
+				 "labelled as Dataset, will be created in neo4j.  When a user " \
+				 "was added into the project via the portal, a user node, " \
+				 "will be created if not already exists, is then connected to " \
+				 "that project node with the relationship to indicate hers role " \
+				 "in that project. \n\n" \
+				 "Some useful links: \n\n " \
+				 "Neo4j database(Indoc VPN required): http://10.3.7.219:7474/browser/ \n" \
+				 "Confluence specifications: https://indocconsortium.atlassian.net/wiki/spaces/VRE/pages/1417871393/GraphDB+Neo4j+Service+Specification' \n" \
+				 "Git repository: https://git.indocresearch.org/platform/dataset_neo4j \n" \
+				 "\n" \
+				 "API test instruction: \n" \
+				 "1. Click the API that you want to test \n" \
+				 "2. You can find 'Example Value | Model' in Description \n" \
+				 "3. Click 'Model' on the right of the 'Example Value' \n" \
+				 "4. Read the information in 'Model' and decide what keys you need \n" \
+				 "5. Click the 'Try it out' button on the top right corner under API \n" \
+				 "6. Edit the 'Example Value' with the keys and values you want to test with \n" \
+				 "7. After modified 'payload' in parameters, now you can edit other required fields such as 'label' and 'id' \n" \
+				 "8. When finished editing parameters, you can click 'Execute' to test the API (only valid payload could be executed)\n" \
+				 "9. To reset the test, you may refresh the page \n"
 
 module_api = Api(version='1.0', title='Neo4j API',
-    description='Neo4j API', doc='/v1/api-doc'
-)
+    			 description=page_description, doc='/v1/api-doc')
 
 # create namespace for node
-node_ns = module_api.namespace('Node Actions', description='Operation on Neo4j Nodes', path ='/')
+node_ns = module_api.namespace('Node', description='Operation on Neo4j Nodes', path ='/')
 # create namespace for relationship
-relationship_ns = module_api.namespace('Relationship Actions', description='Operation on Neo4j Relationship', path ='/')
+relationship_ns = module_api.namespace('Relationship', description='Operation on Neo4j Relationship', path ='/')
 
 
 from .neo4j_node_api import (
 	ActionOnNodeById, 
 	CreateNode, 
 	ActionOnNodeByQuery, 
+	CountActionOnNodeByQuery, 
 	ActionOnProperty
 )
 from .neo4j_relation_api import (
 	RelationshipActions, 
 	RelationshipActionsLabelOption, 
 	ActionOnRelationshipByQuery,
+	CountActionOnRelationshipByQuery,
 	ActionOnNodeByRelationships,
-	ActionOnNodeBeyondRelationship
 )
 
 
 node_ns.add_resource(ActionOnNodeById, '/v1/neo4j/nodes/<label>/node/<id>')
 node_ns.add_resource(CreateNode, '/v1/neo4j/nodes/<label>')
 node_ns.add_resource(ActionOnNodeByQuery, '/v1/neo4j/nodes/<label>/query')
+node_ns.add_resource(CountActionOnNodeByQuery, '/v1/neo4j/nodes/<label>/query/count')
 
 node_ns.add_resource(ActionOnProperty, '/v1/neo4j/nodes/<label>/properties')
 
@@ -54,9 +80,8 @@ relationship_ns.add_resource(RelationshipActions, '/v1/neo4j/relations/<label>')
 relationship_ns.add_resource(RelationshipActionsLabelOption, '/v1/neo4j/relations')
 
 relationship_ns.add_resource(ActionOnRelationshipByQuery, '/v1/neo4j/relations/query')
+relationship_ns.add_resource(CountActionOnRelationshipByQuery, '/v1/neo4j/relations/query/count')
 relationship_ns.add_resource(ActionOnNodeByRelationships, '/v1/neo4j/relations/<label>/node/<id>')
-
-relationship_ns.add_resource(ActionOnNodeBeyondRelationship, '/v1/neo4j/relations/<label>/node/<id>/none')
 
 # # Actions on specific dataset
 # module_api.add_resource(dataset, '/v1/datasets/<dataset_id>')

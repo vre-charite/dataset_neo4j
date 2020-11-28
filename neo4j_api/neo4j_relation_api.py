@@ -2,14 +2,14 @@ from flask import request, make_response, jsonify
 # from flask_restful import Resource
 from flask_restx import Api, Resource, fields
 
-from neo4j_api.neo4j_base import Neo4jRelationship
-from utils import neo4j_obj_2_json
+from neo4j_api.neo4j_base import Neo4jRelationship, Neo4jClient
+from utils import neo4j_obj_2_json, node_2_json, path_2_json
 from . import relationship_ns, module_api
 from neo4j_api.swagger_modules import *
 
 
 class RelationshipActions(Resource):
-    neo4j_method = Neo4jRelationship()
+    neo4j_method = Neo4jClient()
 
     post_module = module_api.model('id_payload', {
         'start_id': fields.Integer(readOnly=True, description='Id of the start node'),
@@ -31,7 +31,7 @@ class RelationshipActions(Resource):
 
         # make the label between node to node
         try:
-            res = self.neo4j_method.add_relation_between_nodes(
+            self.neo4j_method.add_relation_between_nodes(
                 label, start_id, end_id)
         except Exception as e:
             return str(e), 403
@@ -48,19 +48,18 @@ class RelationshipActions(Resource):
         start_id = post_data.get('start_id', None)
         end_id = post_data.get('end_id', None)
         new_label = post_data.get('new_label', None)
+        properties = post_data.get('properties', {})
         if not start_id or not end_id or not new_label:
             return 'start_id, new_label and end_id are required', 403
         
         # also if new and old are the same
-        if label == new_label:
+        if label == new_label and not properties:
             return 'success', 200
             
-        print(start_id, end_id, new_label)
-
         # make the label between node to node
         try:
             res = self.neo4j_method.update_relation(
-                label, new_label, start_id, end_id)
+                label, new_label, start_id, end_id, properties=properties)
         except Exception as e:
             return str(e), 403
 
@@ -68,7 +67,7 @@ class RelationshipActions(Resource):
 
 
 class RelationshipActionsLabelOption(Resource):
-    neo4j_method = Neo4jRelationship()
+    neo4j_method = Neo4jClient()
 
     get_return = """
     [
@@ -122,11 +121,15 @@ class RelationshipActionsLabelOption(Resource):
             end_id = int(end_id) if end_id else None
 
             result = self.neo4j_method.get_relation(label, start_id, end_id)
+            type = None
+            for i in result:
+                type = next(iter(i.types()))
+            if result:
+                result = [{'p': path_2_json(result[0]), 'r': {"type": type, "status": result[0].get("status")}}]
 
         except Exception as e:
             return str(e), 403
 
-        print(result)
         return result, 200
 
 
@@ -251,50 +254,46 @@ class ActionOnRelationshipByQuery(Resource):
         end_label = post_data.get('end_label', None)
         start_params = post_data.get('start_params', None)
         end_params = post_data.get('end_params', None)
+        partial = post_data.get('partial', False)
+        page_kwargs = {
+            "limit": post_data.get("limit", None),
+            "skip": post_data.get("skip", None),
+            "order_by": post_data.get("order_by"),
+            "order_type": post_data.get("order_type"),
+        }
 
         # then call the function to see if we can get the infomation
         try:
             res = self.neo4j_method.get_relation_with_params(
-                label, start_label, end_label, start_params, end_params)
+                label, start_label, end_label, start_params, end_params, partial=partial, page_kwargs=page_kwargs)
         except Exception as e:
             return str(e), 403
-
         result = []
         for x in res:
-            # print(x)
             result.append(neo4j_obj_2_json(x))
 
         return result, 200
 
 
-class ActionOnNodeBeyondRelationship(Resource):
+class CountActionOnRelationshipByQuery(Resource):
     neo4j_method = Neo4jRelationship()
 
-    get_return = """
-    [
-        {
-            "id": <ID>,
-            "labels": [
-                <node-label>
-            ],
-            "path": <nfs-path>,
-            "time_lastmodified": <time-string>,
-            "name": <node-name>,
-            "time_created": <time-string>
-        }
-    ]
-    """
+    def post(self):
+        # get the detail of the node infomation
+        post_data = request.get_json()
+        # to see the end label and start label and also payload
+        label = post_data.get('label', None)
+        start_label = post_data.get('start_label', None)
+        end_label = post_data.get('end_label', None)
+        start_params = post_data.get('start_params', None)
+        end_params = post_data.get('end_params', None)
+        partial = post_data.get('partial', False)
 
-    @relationship_ns.response(200, get_return)
-    def get(self, label, id):
-        """
-        Get the nodes by the properties of node
-        """
+        # then call the function to see if we can get the infomation
         try:
-            res = self.neo4j_method.get_nodes_outside_relation(label, int(id))
-            result = [neo4j_obj_2_json(x).get('node') for x in res]
+            res = self.neo4j_method.get_relation_with_params(
+                label, start_label, end_label, start_params, end_params, partial=partial, count=True)
         except Exception as e:
-            print(e)
             return str(e), 403
 
-        return result, 200
+        return {"count": res.value()[0]}, 200

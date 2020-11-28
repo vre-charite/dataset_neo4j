@@ -1,14 +1,21 @@
 import json
 from neo4j.graph import Node, Relationship, Path
+import py2neo
 
 #from . import neo4j_connection
 
 def node_2_json(obj):
     # print(obj)
-    temp = {
-        'id': obj.id,
-        'labels': list(obj.labels)
-    }
+    if hasattr(obj, "id"):
+        temp = {
+            'id': obj.id,
+            'labels': list(obj.labels)
+        }
+    else:
+        temp = {
+            'id': obj.identity,
+            'labels': list(obj.labels)
+        }
     # add the all the attribute all together
     temp.update(dict(zip(obj.keys(), obj.values())))
 
@@ -72,8 +79,6 @@ def path_2_json(obj):
 def neo4j_obj_2_json(query_record):
 
     def make_json_by_type(obj):
-        # print(type(obj))
-
         if type(obj) == Node:
             return node_2_json(obj)
         elif type(obj) == Path:
@@ -83,7 +88,11 @@ def neo4j_obj_2_json(query_record):
             # if the relation give ()-[PARENT]->() the return
             # will be <abc.PARENT> so I use else with try to catch it
             try:
-                return {"type": obj.type}
+                relation = {"type": obj.type}
+                if hasattr(obj, "_properties"):
+                    for key, value in obj._properties.items():
+                        relation[key] = value
+                return relation
             except Exception as e:
                 return None
 

@@ -33,19 +33,44 @@ property_module = module_api.model('property_module', {
 })
 
 node_update_module = module_api.model('node_update_module', {
-    "new_property_1": fields.String(readOnly=True, description='If property does not exist, neo4j will create it'),
-    "update_property_2": fields.String(readOnly=True, description='If property exist, neo4j will update value'),
+
+    "role": fields.String(readOnly=False, description="(User) user's role in platform"),
+    "status": fields.String(readOnly=False, description="(User) The user's status"),
+
+    "name": fields.String(readOnly=False, description='(Dataset) The name of the node(allow duplication)'),
+    "code": fields.String(readOnly=False, description='(Dataset) The project code used for creating project'),
+    "discoverable": fields.String(readOnly=False,
+                                  description='(Dataset) Whether the project should be discovered by all platform user, or only project members'),
+    "tags": fields.List(fields.String, readOnly=False, description="(Dataset) The tags added to the project"),
+
+    "new_property_1": fields.String(readOnly=False, description='If property does not exist, neo4j will create it'),
+    "update_property_2": fields.String(readOnly=False, description='If property exist, neo4j will update value'),
 })
+
 
 node_create_module = module_api.model('node_create_module', {
-    "name": fields.String(readOnly=True, description='The name of the node(allow duplication)'),
-    "path": fields.String(readOnly=True, description='The path store in nfs'),
+    "name": fields.String(readOnly=False, description='The name of the node(allow duplication)'),
+    "path": fields.String(readOnly=False, description='The path store in nfs'),
 
-    "other_property_1": fields.String(readOnly=True, description='others are the attributes you want to attach to node'),
-    "other_property_2": fields.String(readOnly=True, description='others are the attributes you want to attach to node'),
+    "email": fields.String(readOnly=False, description='(User) The email that user used for self-registrar'),
+    "first_name": fields.String(readOnly=False, description='(User) The first name that user used for self-registrar'),
+    "last_name": fields.String(readOnly=False, description='(User) The last name that user used for self-registrar'),
+    "role": fields.String(readOnly=False, description="(User) user's role in platform"),
+    "status": fields.String(readOnly=False, description="(User) The user's status"),
+
+    "code": fields.String(readOnly=False, description='(Dataset) The project code used for creating project'),
+    "discoverable": fields.Boolean(readOnly=False, description='(Dataset) Whether the project should be discovered by all platform user, or only project members'),
+    "roles": fields.List(fields.String, readOnly=False, description="(Dataset) The possible roles in the project"),
+    "type": fields.String(readOnly=False, description="(Dataset) The type of project, default is 'Usecase'"),
+    "tags": fields.List(fields.String, readOnly=False, description="(Dataset) The tags added to the project"),
+    "metadatas": fields.Wildcard(fields.String, readOnly=False, description="(Dataset) Default value {}"),
+
+
+    "other_property_1": fields.String(readOnly=False, description='(optional) others are the attributes you want to attach to node'),
+    "other_property_2": fields.String(readOnly=False, description='(optional) others are the attributes you want to attach to node'),
 })
 
-node_query_module = module_api.model('node_create_module', {
+node_query_module = module_api.model('node_query_module', {
     "property_key": fields.String(readOnly=True, description='the key value pairs that node has corresponding attribute'),
 })
 

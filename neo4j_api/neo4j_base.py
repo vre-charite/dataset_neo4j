@@ -8,80 +8,153 @@ from datetime import datetime
 
 from . import neo4j_connection
 from config import ConfigClass
-from utils import neo4j_obj_2_json
+from utils import neo4j_obj_2_json, path_2_json, node_2_json
+from services.logger_services.logger_factory_service import SrvLoggerFactory
+from py2neo import Graph, Node, Relationship
+from py2neo.matching import RelationshipMatcher, NodeMatcher, CONTAINS 
+import neotime
+
+class Neo4jClient(object):
+     
+    def __init__(self):
+        self._logger = SrvLoggerFactory('api_invitation').get_logger()
+        try:
+            self.graph = Graph(
+                ConfigClass.NEO4J_URL, 
+                username=ConfigClass.NEO4J_USER, 
+                password=ConfigClass.NEO4J_PASS,
+                max_connections=200,
+            )
+            self.nodes = NodeMatcher(self.graph)
+            self.relationships = RelationshipMatcher(self.graph)
+        except Exception as e:
+            self._logger.error("Error in __init__ connecting to Neo4j:" + str(e))
+
+    def add_node(self, label, name, param={}):
+        if label[0].isnumeric():
+            raise Exception("Invalid input")
+        node = Node(
+            label, 
+            name=name,
+            time_created=neotime.DateTime.utc_now(),
+            time_lastmodified=neotime.DateTime.utc_now(),
+            **param,
+        )
+        parent_id = param.pop("parent_id", None)
+        parent_relation = param.pop("parent_relation", None)
+        # if we have parent then add relationship
+        if parent_id and parent_relation:
+            end_node = self.nodes.get(parent_id)
+            relationship = Relationship(node, parent_relation, end_node) 
+            self.graph.create(relationship)
+        self.graph.create(node)
+        return node
+
+    def get_node(self, label, id):
+        return self.graph.nodes.match(label).where("id(_) = %d" % id).first()
+        #return self.graph.nodes.get(id)
+
+    # in order to facilitate the query in the frontend
+    # we provide all the possible key with value with it
+    def get_property_by_label(self, label):
+        #neo4j_session = neo4j_connection.session()
+        #query = 'MATCH (n:%s) UNWIND keys(n) as key \
+        #    return key, collect(distinct n[key]) as options' % (label)
+        #res = neo4j_session.run(query)
+        #return res
+        return self.nodes.match(label).all()
+
+    def update_node(self, label, id, params={}, update_modified_time=True):
+        node = self.get_node(label, id)
+        if update_modified_time:
+            node.update(**params, time_lastmodified=neotime.DateTime.utc_now())
+        else:
+            node.update(**params)
+        self.graph.push(node)
+        return node
+
+    def query_node(self, label, params=None, limit=None, skip=None, count=False, partial=False, order_by=None, order_type=None):
+        if partial:
+            for key, value in params.items():
+                if isinstance(value, str):
+                    params[key] = CONTAINS(value)
+                else:
+                    params[key] = value
+        if params:
+            query = self.nodes.match(label, **params)
+        else:
+            query = self.nodes.match(label)
+
+        if count:
+            return query.count()
+        if order_by: 
+            if order_type and order_type.lower() == "desc":
+                order_by = f"_.{order_by} DESC"
+            else:
+                order_by = f"_.{order_by}"
+            query = query.order_by(order_by)
+        if limit:
+            query = query.limit(limit)
+        if skip:
+            query = query.skip(skip)
+        return query.all() 
+
+    # method allow to query the relationship
+    # also the parameter allow the none so that we can query the 1-to-1
+    def get_relation(self, relation_label, start_id=None, end_id=None):
+        start_node = None
+        end_node = None
+        if start_id:
+            start_node = self.nodes.get(start_id)
+        if end_id:
+            end_node = self.nodes.get(end_id)
+
+        if not start_node and not end_node:
+            return []
+        if relation_label:
+            return self.relationships.match((start_node, end_node), r_type=relation_label).all()
+        else:
+            return self.relationships.match((start_node, end_node)).all()
+
+    def add_relation_between_nodes(self, relation_label, start_id, end_id):
+        if type(start_id) == list and type(end_id) == list:
+            raise Exception('Both start_id and end_id can be the list')
+        if start_id == end_id:
+            raise Exception("Error cannot add yourself as parent/child")
+        start_node = self.nodes.get(start_id)
+        end_node = self.nodes.get(end_id)
+        relationship = self.relationships.match((start_node, end_node)).first()
+        if hasattr(relationship, "start_node") and hasattr(relationship, "end_node"):
+            raise Exception("dataset(s) already be the parent(s).")
+
+        relationship = Relationship(start_node, relation_label, end_node)
+        self.graph.create(relationship)
+        return relationship
+
+    def update_relation(self, label, new_label, start_id, end_id, properties={}):
+        start_node = self.nodes.get(start_id)
+        end_node = self.nodes.get(end_id)
+        relationship = self.relationships.match((start_node, end_node)).first()
+        self.graph.separate(relationship)
+        relationship = Relationship(start_node, new_label, end_node)
+        for key, value in properties.items():
+            relationship[key] = value
+        self.graph.create(relationship)
+        return relationship
+
+    def delete_relation(self, start_id, end_id):
+        start_node = self.nodes.get(start_id)
+        end_node = self.nodes.get(end_id)
+        if start_node and end_node:
+            relationship = self.relationships.match((start_node, end_node)).first()
+            self.graph.separate(relationship)
+            return relationship
+        else:
+            raise Exception
 
 
 class Neo4jNode(object):
     # todo move the neo4j_connection here?
-
-    # api will add the node in the neo4j
-    # if parent_id appear in the parameter then it will also
-    # create a relationship between two
-    def add_node(self, label, name, param={}):
-        neo4j_session = neo4j_connection.session()
-
-        query = 'create (node:%s) set node=$param, node.name=$name , \
-            node.time_created = datetime(), node.time_lastmodified = datetime() \
-            return node' % (label)
-
-        res = neo4j_session.run(query, param=param, name=name)
-        parent_id = param.pop("parent_id", None)
-        parent_relation = param.pop("parent_relation", None)
-
-        # if we have parent then add relationship
-        if parent_id != None and parent_relation != None:
-            nid = [x['node'].id for x in res][0]
-            query = 'match (p1), (n:%s) \
-                    where ID(p1) = $parent_id and ID(n) = $node_id \
-                    set n.path = p1.path + "/" + n.path \
-                    create p=(p1)-[:%s]->(n) \
-                    return n as node' % (label, parent_relation)
-
-            res = neo4j_session.run(query, parent_id=int(
-                parent_id), node_id=int(nid))
-
-        return res
-
-
-    def get_node(self, label, id):
-        neo4j_session = neo4j_connection.session()
-
-        query = 'match (node:%s) where ID(node)=$nid return node' % (label)
-
-        res = neo4j_session.run(query, nid=int(id))
-
-        return res
-
-
-    # update the node attribute by give id and parameter
-    def update_node(self, label, id, params={}):
-        neo4j_session = neo4j_connection.session()
-
-        query = "match (node:%s) where ID(node)=%d set node = $params, \
-            node.time_lastmodified = datetime() return node" % (label, id)
-
-        res = neo4j_session.run(query, params=params)
-
-        return res
-
-
-    # use the params to generate the where clause in query
-    def query_node(self, label, params=None):
-        neo4j_session = neo4j_connection.session()
-        query = 'match (node:%s) ' % (label)
-        if(isinstance(params, dict)):
-            query += 'where'
-            for key, value in params.items():
-                if type(value) == str:
-                    value = "'%s'" % value
-                query += " node.{key} = {value} and".format(
-                    key=key, value=value)
-            query = query[:-3]
-        query += " return node"
-
-        res = neo4j_session.run(query)
-        return res
-
 
     # in order to facilitate the query in the frontend
     # we provide all the possible key with value with it
@@ -95,92 +168,24 @@ class Neo4jNode(object):
 
         return res
 
+    # delete node recursively, this function does not have API, test only
+    def delete_node(self, node_id):
+        neo4j_session = neo4j_connection.session()
+        query = "MATCH (n:test_label) \
+                 where id(n)=%s \
+                 DETACH DELETE n" % node_id
+        res = neo4j_session.run(query)
+
+        return res
+
 
 class Neo4jRelationship(object):
-    def relation_constrain_check(self, relation_label, dataset_id, target_dataset):
-        # validate the target cannot add to itself
-        # if there are common in intersection then abort it
-        if set(dataset_id).intersection(target_dataset):
-            return "Error cannot add yourself as parent/child", False
-
-        # currently I dont have any better idea to check if we add the duplicate
-        neo4j_session = neo4j_connection.session()
-        query = 'match p=(n1)-[:%s]->(n2) where ID(n1) \
-            in $dataset_id and ID(n2) in $target_dataset return n1' % (relation_label)
-        res = neo4j_session.run(
-            query, dataset_id=dataset_id, target_dataset=target_dataset)
-
-        # if we get some dataset then they are duplicate
-        duplicate_dataset = [x[0].id for x in res]
-        if len(duplicate_dataset):
-            return "dataset(s) %s already be the parent(s)." % (duplicate_dataset), False
-
-        # impletement the cycle checking the dataset in child branch cannot be parent
-        res = neo4j_session.run('match (n1)-[:PARENT*]->(n2) \
-            where ID(n2) in $dataset_id and ID(n1) in $target_dataset return n2',
-                                dataset_id=dataset_id, target_dataset=target_dataset)
-
-        # if we get some dataset then they are cascade child dataset
-        cascade_child_dataset = [x[0].id for x in res]
-        if len(cascade_child_dataset):
-            return 'You cannot add the cascaded child dataset as parent or the other way around.' \
-                % (cascade_child_dataset), False
-
-        return None, True
-
-
-    # method allow to query the relationship
-    # also the parameter allow the none so that we can query the 1-to-1
-    def get_relation(self, relation_label, start_id=None, end_id=None):
-        query = 'match p=(start_node)-[r%s]->(end_node) ' % \
-            (':%s' % relation_label if relation_label else '')
-
-        # now start add the start node and end node condition
-        if start_id and end_id:
-            query += 'where ID(start_node)=$start_id and ID(end_node)=$end_id '
-        elif start_id:
-            query += 'where ID(start_node)=$start_id '
-        elif end_id:
-            query += 'where ID(end_node)=$end_id '
-        query += 'return p, r'
-
-        neo4j_session = neo4j_connection.session()
-        res = neo4j_session.run(query, start_id=start_id, end_id=end_id)
-
-        return [neo4j_obj_2_json(x) for x in res]
-
-
-    # this function will change the relation label between two node
-    # since we cannot update the lable so we can only delete and add new one
-    def update_relation(self, old_label, new_label, start_id, end_id):
-        query = 'MATCH (n)-[rel:%s]->(m) where ID(n)=$start_id \
-                    and ID(m)=$end_id MERGE (n)-[:%s]->(m) \
-                    DELETE rel' % (old_label, new_label)
-
-        neo4j_session = neo4j_connection.session()
-        res = neo4j_session.run(query, start_id=start_id, end_id=end_id)
-
-        for x in res:
-            print(res)
-
-        return res
-
-
-    # this function will delete relation between nodes
-    def delete_relation(self, start_id, end_id):
-        query = 'MATCH (n)-[rel]->(m) where ID(n)=$start_id \
-                    and ID(m)=$end_id DELETE rel'
-
-        neo4j_session = neo4j_connection.session()
-        res = neo4j_session.run(query, start_id=start_id, end_id=end_id)
-
-        return res
-
 
     # note here it is not necessary to have label and parameter
     def get_relation_with_params(self, relation_label=None,
                                  start_label=None, end_label=None,
-                                 start_params=None, end_params=None):
+                                 start_params=None, end_params=None, 
+                                 count=False, partial=False, page_kwargs={}):
         def format_label(label):
             if(label):
                 return ':'+label
@@ -192,7 +197,7 @@ class Neo4jRelationship(object):
 
         query = 'match p=(start_node%s)-[r%s]->(end_node%s) ' % (
                 start_label, relation_label,  end_label)
-
+ 
         if(isinstance(start_params, dict)):
             query += 'where'
             for key, value in start_params.items():
@@ -203,8 +208,12 @@ class Neo4jRelationship(object):
                 if key == 'id':
                     query += ' Id(start_node) = {value} and'.format(value=value)
                 else:
-                    query += ' start_node.{key} = {value} and'.format(
-                        key=key, value=value)
+                    if partial:
+                        query += ' start_node.{key} contains {value} and'.format(
+                            key=key, value=value)
+                    else:
+                        query += ' start_node.{key} = {value} and'.format(
+                            key=key, value=value)
             query = query[:-3]
 
         if(isinstance(end_params, dict)):
@@ -219,41 +228,26 @@ class Neo4jRelationship(object):
                     query += ' end_node.{key} = {value} and'.format(
                         key=key, value=value)
             query = query[:-3]
-        query += 'return *'
-
-        print(query)
+        if count:
+            query += 'return count(*)'
+        else:
+            query += 'return *'
+            if page_kwargs.get("order_by"):
+                order = page_kwargs['order_by']
+                query += f' ORDER BY start_node.{order}'
+            if page_kwargs.get("order_type"):
+                order_type = page_kwargs['order_type']
+                query += f' {order_type}'
+            if page_kwargs.get("skip"):
+                skip = page_kwargs["skip"]
+                query += f' skip {skip}'
+            if page_kwargs.get("limit"):
+                limit = page_kwargs["limit"]
+                query += f' limit {limit}'
         neo4j_session = neo4j_connection.session()
         res = neo4j_session.run(query)
 
         return res
-
-
-    def add_relation_between_nodes(self, relation_label, start_id, end_id):
-
-        # now I only allow one be the array either start id or end id
-        if type(start_id) == list and type(end_id) == list:
-            raise Exception('Both start_id and end_id can be the list')
-
-        if type(start_id) != list:
-            start_id = [start_id]
-        if type(end_id) != list:
-            end_id = [end_id]
-
-        # first check the all constrain
-        constrain_res = self.relation_constrain_check(
-            relation_label, start_id, end_id)
-        if not constrain_res[1]:
-            raise Exception(constrain_res[0])
-
-        # if every work fine add the relationship
-        neo4j_session = neo4j_connection.session()
-        query = 'match (start),(end) where ID(start) in $start_id and ID(end) in $end_id \
-            create p=(start)-[:%s]->(end) return p' % (relation_label)
-        res = neo4j_session.run(
-            query, label=relation_label, start_id=start_id, end_id=end_id)
-
-        return res
-
 
     # method allow to query the nodes on other side of relation
     # also the parameter allow the none so that we can query the
@@ -273,15 +267,9 @@ class Neo4jRelationship(object):
         return res
 
 
-    # this is designed for when choosing adding the dataset
-    # that the node should not either be in the parent tree or
-    # the children tree
-    def get_nodes_outside_relation(self, relation_label, current_dataset_id):
-        neo4j_session = neo4j_connection.session()
 
-        query = 'match (n),(n1) where not (n1)-[:%s]->(n) and not (n)-[:%s] \
-            ->(n1) and ID(n1)=$dataset_id and not ID(n)=$dataset_id return n as node' % (relation_label, relation_label)
 
-        res = neo4j_session.run(query, dataset_id=current_dataset_id)
 
-        return res
+
+
+

@@ -7,7 +7,7 @@ from utils import neo4j_obj_2_json, node_2_json
 from . import node_ns
 from neo4j_api.swagger_modules import (
     node_update_module, node_create_module,
-    node_query_module)
+    node_query_module, node_query_module_count)
 
 
 class ActionOnNodeById(Resource):
@@ -15,28 +15,62 @@ class ActionOnNodeById(Resource):
     node_method = Neo4jClient()
 
     get_returns = """
-        [
-            {
-                "id": <ID>,
-                "labels": [
-                    <node-label>
-                ],
-                "path": <nfs-path>,
-                "time_lastmodified": <time-string>,
-                "name": <node-name>,
-                "time_created": <time-string>,
-                "other_property": "xxxx",
-                "other_property_2": "xxxx"
-            }
-        ]
-
+     Dataset response: 
+     [
+        {'id': <Node-ID>,
+         'labels': ['Dataset'],
+         'code': <project-code>,
+         'is_new': False,
+         'last_login': '2020-11-23T17:06:27.600313',
+         'roles': [<project_enabled-roles>],
+         'description': <project-description>, 
+         'type': 'Usecase', 
+         'tags': [<project-tags>], 
+         'path': <nfs-path>,
+         'time_lastmodified': <time-string>,
+         'discoverable': <whether-discoverable-to-all-users>,
+         'name': <project-name>,
+         'time_created': <time-string>}
+     ]\n
+     User response:
+    [
+        {"id": <node-id>,
+         "labels": ["User"],
+         "path": "users",
+         "time_lastmodified": <time-string>,
+         "role": <user-role>,
+         "last_login": <time-string>,
+         "name": <username>,
+         "time_created": <time-string>,
+         "last_name": <lastname>,
+         "realm": "vre",
+         "first_name": <firstname>,
+         "email": <email>,
+         "status": "active"}
+    ]\n
+    Default response:
+    [
+        {
+            "id": <ID>,
+            "labels": [
+                <node-label>
+            ],
+            "name": <node-name>,
+            "time_created": <time-string>,
+            "time_lastmodified": <time-string>,
+            "other_property": "xxxx",
+            "other_property_2": "xxxx"
+        }
+    ]
     """
 
+    @node_ns.doc(params={'label': 'Dataset', 'id': 'Node ID'})
     @node_ns.response(200, get_returns)
     @node_ns.response(403, """Exception""")
     def get(self, label, id):
         """
-        Get the Node by Input Id
+        Get the Node with the input Node ID
+        Usage: used for check if project exists
         """
         try:
             result = self.node_method.get_node(label, int(id))
@@ -51,32 +85,65 @@ class ActionOnNodeById(Resource):
 
 
     put_returns = """
-        # Note: Please pass the entire attribute here
-        # if you want to delete the attribute then you can remove it from json.
-        # if you want to add the new attribtue then add key-value into json
+        Dataset response:
         [
-            {
-                "id": <ID>,
-                "labels": [
-                    <node-label>
-                ],
-                "path": <nfs-path>,
-                "time_lastmodified": <time-string>,
-                "name": <node-name>,
-                "time_created": <time-string>,
-                "other_property": "xxxx",
-                "other_property_2": "xxxx",
-                "new_attribute":"new_value"
+            {"id": 66,
+             "labels": ["Dataset"],
+             "code": "firefoxcreation",
+             "is_new"(If exists): false,
+             "roles": ["admin", "contributor"],
+             "description": "",
+             "admin"(If exists): [<project-admin>],
+             "type": "Usecase",
+             "tags": [<project-tag>],
+             "path": <nfs-path>,
+             "time_lastmodified": <time-string>,
+             "discoverable": <whether-discoverable-to-all-users>,
+             "name": <project-name>,
+             "time_created": <time-string>,
+             }
+        ]\n
+        User response:
+        [
+            {"id": <node-id>,
+            "labels": ["User"],
+            "path": "users",
+            "time_lastmodified": <time-string>,
+            "role": <platform-role>,
+            "last_login": <time-string>,
+            "name": <username>,
+            "time_created": <time-string>,
+            "last_name": <lastname>,
+            "realm": "vre",
+            "first_name": <firstname>,
+            "email": <user-email>,
+            "status": "active"
+            }
+        ]\n
+        Default response:
+        [
+            {"id": <ID>,
+             "labels": [<node-label>],
+             "name": <node-name>,
+             "time_created": <time-string>,
+             "time_lastmodified": <time-string>,
+            
+            
+             "other_property": "xxxx",
+             "other_property_2": "xxxx",
+             "new_attribute":"new_value"
             }
         ]
     """
 
+    @node_ns.doc(params={'label': 'Dataset/User', 'id': 'Node ID'})
     @node_ns.expect(node_update_module)
     @node_ns.response(200, put_returns)
     @node_ns.response(403, 'Exception')
     def put(self, label, id):
         """
-        Update the Node by Input Id
+        Update the Node with Input Node ID
+        Usage: used for updating users' status, or projects' name, discoverable, description, tags
         """
         post_data = request.get_json()
 
@@ -91,6 +158,16 @@ class ActionOnNodeById(Resource):
 
         return result, 200
 
+    def delete(self, label, id):
+        """
+        Delete node by label and id 
+        """
+        try:
+            self.node_method.delete_node(label, int(id))
+        except Exception as e:
+            return str(e), 403
+        return 'success', 200
+
 
 class CreateNode(Resource):
     # initialize the class for using the method
@@ -101,13 +178,11 @@ class CreateNode(Resource):
     {
         "result": {
             "parent_relation": <relation-label>,
-            "admin": [
-                <admin-username>
-            ],
+            "admin"(this one has been deprecated): [<admin-username>],
             "time_lastmodified": <time-string>,
             "_key2": "value2",
             "path": <nfs-path/project/code>,
-            "id": <ID>>,
+            "id": <Node-ID>,
             "time_created": <time-string>,
             "name": <node-name>
             "labels": [
@@ -138,7 +213,7 @@ class CreateNode(Resource):
             "id": <ID>
         }
     }\n
-    Other response:
+    Default response:
     {'id': <ID>, 
     'labels': ['test_label'],
     'name': <node-name>,
@@ -150,11 +225,13 @@ class CreateNode(Resource):
     """
 
     @node_ns.expect(node_create_module)
+    @node_ns.doc(params={'label': 'Dataset/User'})
     @node_ns.response(200, post_returns)
     @node_ns.response(403, """Exception""")
     def post(self, label):
         """
         Create New Node with Given Label
+        Usage: used for creating new user or new project
         """
         post_data = request.get_json()
 
@@ -174,29 +251,47 @@ class ActionOnNodeByQuery(Resource):
     node_method = Neo4jClient()
 
     post_returns = """
-        [
-            {
-                "id": <ID>,
-                "labels": [
-                    <node-label>
-                ],
-                "path": <nfs-path>,
-                "time_lastmodified": <time-string>,
-                "name": <node-name>,
-                "time_created": <time-string>
-            }
-        ]
+    User response:
+    [
+        {"id": 0,
+         "labels": ["User"],
+         "path": "users",
+         "time_lastmodified": <time-string>,
+         "role": <platform-role>,
+         "last_login": <time-string>,
+         "name": <user-name>,
+         "last_name": <last-name>,
+         "first_name": <first-name>,
+         "email": <email-address>,
+         "status": <user-status>
+         },
+    ]\n
+    Default response:
+    [
+        {
+            "id": <ID>,
+            "labels": [
+                <node-label>
+            ],
+            "path": <nfs-path>,
+            "time_lastmodified": <time-string>,
+            "name": <node-name>,
+            "time_created": <time-string>
+        }
+    ]
 
     """
 
     # because we will pass the payload to search so I have to
     # use the post to get the nodes
     @node_ns.expect(node_query_module)
+    @node_ns.doc(params={'label': 'User'})
     @node_ns.response(200, post_returns)
     @node_ns.response(403, """Exception""")
     def post(self, label):
         """
-        Make a Complex Query by Its Payload
+        Get platform users with given pages in Administrator Console
+        Usage: used for listing users, listing projects, check if user exists with given username
         """
         post_data = request.get_json()
         limit = None
@@ -243,27 +338,17 @@ class CountActionOnNodeByQuery(Resource):
     node_method = Neo4jClient()
 
     post_returns = """
-        [
-            {
-                "id": <ID>,
-                "labels": [
-                    <node-label>
-                ],
-                "path": <nfs-path>,
-                "time_lastmodified": <time-string>,
-                "name": <node-name>,
-                "time_created": <time-string>
-            }
-        ]
-
+        {"count": <number-of-records>}
     """
 
-    @node_ns.expect(node_query_module)
+    @node_ns.expect(node_query_module_count)
+    @node_ns.doc(params={'label': 'User'})
     @node_ns.response(200, post_returns)
     @node_ns.response(403, """Exception""")
     def post(self, label):
         """
-        Make a Complex Query by Its Payload
+        Get number of platform users with given pages in Administrator Console
+        Usage: count the number of users to be displayed in the Administrators Console
         """
         post_data = request.get_json()
         partial = False
@@ -286,17 +371,42 @@ class ActionOnProperty(Resource):
     node_method = Neo4jNode()
 
     get_returns = """
-        {
-            "attribute_1":["all possible value"],
-            "attribute_2":["all possible value"],
-        }
+    User response: 
+    {"last_login": [<time-string>],
+     "status": ["active", "disabled"],
+     "email": [<email>],
+     "first_name": [<first-name>],
+     "path": ["users"],
+     "role": ["admin", "member"],
+     "name": [<user-name>],
+     "last_name": [<last-name>],
+     "realm": ["vre"]
+    }\n
+    Dataset response:
+    {"code": [<project-code>],
+     "description": [<project-description>],
+     "admin"(no longer in use): [<[project_creator-admin]>],
+     "roles": [["admin","contributor"],["admin"]],
+     "discoverable": [false, true],
+     "name": [<project-name>],
+     "tags": [<[project-tags]>],
+     "labels": [["Dataset"]],
+     "id": [<project-ID>],
+     "is_new"(no longer in use): [false,true]
+    }\n
+    Default response:
+    {"attribute_1":["all possible value"],
+     "attribute_2":["all possible value"],
+    }
     """
 
+    @node_ns.doc(params={'label': 'Dataset'})
     @node_ns.response(200, get_returns)
     @node_ns.response(403, """Exception""")
     def get(self, label):
         """
         Retreive the All the Property and Possible Value with Given Label
+        Usage: used for getting project properties such as metadata, tag, usecase.
         """
         try:
             res = self.node_method.get_property_by_label(label)

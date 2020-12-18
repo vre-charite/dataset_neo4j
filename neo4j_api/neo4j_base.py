@@ -152,6 +152,14 @@ class Neo4jClient(object):
         else:
             raise Exception
 
+    def delete_node(self, label, id):
+        node = self.graph.nodes.match(label).where("id(_) = %d" % id).first()
+        if node:
+            self.graph.separate(node)
+            self.graph.delete(node)
+        else:
+            raise Exception
+
 
 class Neo4jNode(object):
     # todo move the neo4j_connection here?
@@ -225,8 +233,20 @@ class Neo4jRelationship(object):
                 if key == 'id':
                     query += ' Id(end_node) = {value} and'.format(value=value)
                 else:
-                    query += ' end_node.{key} = {value} and'.format(
-                        key=key, value=value)
+                    if partial and value:
+                        if key in ["container_id"]:
+                            query += ' end_node.{key} CONTAINS {value} and'.format(
+                                key=key, value=value)
+                        else:
+                            query += ' TOLOWER(end_node.{key}) CONTAINS TOLOWER({value}) and'.format(
+                                key=key, value=value)
+                    else:
+                        if key in ["container_id"]:
+                            query += ' end_node.{key} = {value} and'.format(
+                                key=key, value=value)
+                        else:
+                            query += ' TOLOWER(end_node.{key}) = TOLOWER({value}) and'.format(
+                                key=key, value=value)
             query = query[:-3]
         if count:
             query += 'return count(*)'
@@ -265,11 +285,3 @@ class Neo4jRelationship(object):
         res = neo4j_session.run(query, node_id=node_id)
 
         return res
-
-
-
-
-
-
-
-

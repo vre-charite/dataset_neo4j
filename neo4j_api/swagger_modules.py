@@ -34,44 +34,59 @@ property_module = module_api.model('property_module', {
 
 node_update_module = module_api.model('node_update_module', {
 
-    "role": fields.String(readOnly=False, description="(User) user's role in platform"),
-    "status": fields.String(readOnly=False, description="(User) The user's status"),
+    "role": fields.String(readOnly=True, description="(User) user's role in platform"),
+    "status": fields.String(readOnly=True, description="(User) The user's status"),
 
-    "name": fields.String(readOnly=False, description='(Dataset) The name of the node(allow duplication)'),
-    "code": fields.String(readOnly=False, description='(Dataset) The project code used for creating project'),
-    "discoverable": fields.String(readOnly=False,
+    "name": fields.String(readOnly=True, description='(Dataset) The name of the node(allow duplication)'),
+    "discoverable": fields.String(readOnly=True,
                                   description='(Dataset) Whether the project should be discovered by all platform user, or only project members'),
-    "tags": fields.List(fields.String, readOnly=False, description="(Dataset) The tags added to the project"),
+"description": fields.String(readOnly=True, description='(Dataset) The description of the project'),
+    "tags": fields.List(fields.String, readOnly=True, description="(Dataset) The tags added to the project"),
 
-    "new_property_1": fields.String(readOnly=False, description='If property does not exist, neo4j will create it'),
-    "update_property_2": fields.String(readOnly=False, description='If property exist, neo4j will update value'),
+    "new_property_1": fields.String(readOnly=True, description='If property does not exist, neo4j will create it'),
+    "update_property_2": fields.String(readOnly=True, description='If property exist, neo4j will update value'),
 })
 
 
 node_create_module = module_api.model('node_create_module', {
-    "name": fields.String(readOnly=False, description='The name of the node(allow duplication)'),
-    "path": fields.String(readOnly=False, description='The path store in nfs'),
+    "name": fields.String(readOnly=True, description='The name of the node(allow duplication)'),
+    "path": fields.String(readOnly=True, description='The path store in nfs'),
 
-    "email": fields.String(readOnly=False, description='(User) The email that user used for self-registrar'),
-    "first_name": fields.String(readOnly=False, description='(User) The first name that user used for self-registrar'),
-    "last_name": fields.String(readOnly=False, description='(User) The last name that user used for self-registrar'),
-    "role": fields.String(readOnly=False, description="(User) user's role in platform"),
-    "status": fields.String(readOnly=False, description="(User) The user's status"),
+    "email": fields.String(readOnly=True, description='(User) The email that user used for self-registrar'),
+    "first_name": fields.String(readOnly=True, description='(User) The first name that user used for self-registrar'),
+    "last_name": fields.String(readOnly=True, description='(User) The last name that user used for self-registrar'),
+    "role": fields.String(readOnly=True, description="(User) user's role in platform"),
+    "status": fields.String(readOnly=True, description="(User) The user's status"),
 
-    "code": fields.String(readOnly=False, description='(Dataset) The project code used for creating project'),
-    "discoverable": fields.Boolean(readOnly=False, description='(Dataset) Whether the project should be discovered by all platform user, or only project members'),
-    "roles": fields.List(fields.String, readOnly=False, description="(Dataset) The possible roles in the project"),
-    "type": fields.String(readOnly=False, description="(Dataset) The type of project, default is 'Usecase'"),
-    "tags": fields.List(fields.String, readOnly=False, description="(Dataset) The tags added to the project"),
-    "metadatas": fields.Wildcard(fields.String, readOnly=False, description="(Dataset) Default value {}"),
+    "code": fields.String(readOnly=True, description='(Dataset) The project code used for creating project'),
+    "description": fields.String(readOnly=True, description='(Dataset) The description of the project'),
+    "discoverable": fields.Boolean(readOnly=True, description='(Dataset) Whether the project should be discovered by all platform user, or only project members'),
+    "roles": fields.List(fields.String, readOnly=True, description="(Dataset) The possible roles in the project"),
+    "type": fields.String(readOnly=True, description="(Dataset) The type of project, default is 'Usecase'"),
+    "tags": fields.List(fields.String, readOnly=True, description="(Dataset) The tags added to the project"),
+    "metadatas": fields.Raw(readOnly=True, description="(Dataset) Default value {}"),
 
 
-    "other_property_1": fields.String(readOnly=False, description='(optional) others are the attributes you want to attach to node'),
-    "other_property_2": fields.String(readOnly=False, description='(optional) others are the attributes you want to attach to node'),
+    "other_property_1": fields.String(readOnly=True, description='(optional) others are the attributes you want to attach to node'),
+    "other_property_2": fields.String(readOnly=True, description='(optional) others are the attributes you want to attach to node'),
 })
 
 node_query_module = module_api.model('node_query_module', {
-    "property_key": fields.String(readOnly=True, description='the key value pairs that node has corresponding attribute'),
+    "limit": fields.Integer(readOnly=True, description='page_size, number of records to be displayed per page'),
+    "skip": fields.Integer(readOnly=True, description='page*page_size, total number of records to skip'),
+    "order by": fields.String(readOnly=True, description="The column to be sorted, default order by 'time_created',"
+                                                         "other options are: 'name', 'email', 'first_name', 'last_name', 'last_login'"),
+    "order_type": fields.String(readOnly=True, description='The sorting method, default by desc, can choose asc'),
+    "name (optional)": fields.String(readOnly=True, description="The characters that account 'name' contains for filtering"),
+    "email (optional)": fields.String(readOnly=True, description="The characters that account 'email' contains for filtering"),
+
+})
+
+node_query_module_count = module_api.model('node_query_module_count', {
+    "count": fields.Boolean(readOnly=True, description='number of records'),
+    "partial": fields.Boolean(readOnly=True, description='whether enable partial search'),
+    "name (optional)": fields.String(readOnly=True, description="The characters that account 'name' contains for filtering"),
+    "email (optional)": fields.String(readOnly=True, description="The characters that account 'email' contains for filtering"),
 })
 
 

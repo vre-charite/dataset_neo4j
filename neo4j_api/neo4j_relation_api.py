@@ -11,16 +11,20 @@ from neo4j_api.swagger_modules import *
 class RelationshipActions(Resource):
     neo4j_method = Neo4jClient()
 
-    post_module = module_api.model('id_payload', {
-        'start_id': fields.Integer(readOnly=True, description='Id of the start node'),
-        'end_id': fields.Integer(readOnly=True, description='Id of the end node')
+    post_module = module_api.model('relation_add_module', {
+        'start_id': fields.Integer(readOnly=True, description='Id of the start node (User)'),
+        'end_id': fields.Integer(readOnly=True, description='Id of the end node (Dataset)')
     })
 
     # recieve the parameter to add edge between two
     @relationship_ns.expect(post_module)
+    @relationship_ns.response(200, 'success')
+    @relationship_ns.response(403, 'Exception')
+    @relationship_ns.doc(params={'label': 'admin/contributor'})
     def post(self, label):
         """
         add the relationship between the two node
+        Usage: used for adding user to the project
         """
         post_data = request.get_json()
         # get from the query
@@ -39,9 +43,13 @@ class RelationshipActions(Resource):
         return 'success', 200
 
     @relationship_ns.expect(post_module)
+    @relationship_ns.response(200, 'success')
+    @relationship_ns.response(403, 'Exception')
+    @relationship_ns.doc(params={'label': 'admin/contributor'})
     def put(self, label):
         """
         Change the relationship between the two node if exist by label
+        Usage: used for changing relationship between user and project
         """
         post_data = request.get_json()
         # get from the query
@@ -71,42 +79,32 @@ class RelationshipActionsLabelOption(Resource):
 
     get_return = """
     [
-        {
-            "p": {
-                "test_grand_parent_dataset_0b42d471-63c8-4869-8972-26223806e9b4": {
-                    "id": 171,
-                    "children": {
-                        "test_parent_dataset_0b42d471-63c8-4869-8972-26223806e9b4": {
-                            "id": 170,
-                            "children": {}
-                        }
-                    }
-                }
-            },
-            "r": {
-                "type": "PARENT"
-            },
-            "node":{
-                "id": <ID>,
-                "labels": [
-                    <node-label>
-                ],
-                "path": <nfs-path>,
-                "time_lastmodified": <time-string>,
-                "name": <node-name>,
-                "time_created": <time-string>,
-                "other_property": "xxxx",
-                "other_property_2": "xxxx"
-            }
+        {"p": {
+            <username>: {
+                        "id": <user-id>, 
+                        "children": {
+                                <projcet-name>: {
+                                        "id": <project-id>,
+                                        "children": {}
+                                                }
+                                        }
+                                }
+                        },
+         "r": {"type": <relation-label>},
         }
     ]
     """
 
     # the start id and end id will be in the query string
     @relationship_ns.response(200, get_return)
+    @relationship_ns.response(403, 'Exception')
+    @relationship_ns.doc(params={"params":"{'start_id': 'start node id (User)', "
+                                          "'end_id': 'end node id (Dataset)', "
+                                          "'label': 'relation label (admin/contributor)'}"})
     def get(self):
         """
         Get the relationship between the two node if exist by label
+        Usage: get relation between user and project
         """
         # get from the query
         start_id = request.args.get('start_id', None)
@@ -132,10 +130,14 @@ class RelationshipActionsLabelOption(Resource):
 
         return result, 200
 
-
+    @relationship_ns.response(200, 'success')
+    @relationship_ns.response(403, 'Exception')
+    @relationship_ns.doc(params={"params": "{'start_id': 'start node id', "
+                                           "'end_id': 'end node id'}"})
     def delete(self):
         """
         delete the relationship between two nodes
+        Usage: remove user from project
         """
         # get from the query
         start_id = request.args.get('start_id', None)
@@ -173,10 +175,15 @@ class ActionOnNodeByRelationships(Resource):
     ]
     """
 
+    @relationship_ns.deprecated
     @relationship_ns.response(200, get_return)
+    @relationship_ns.response(403, 'Exception')
+    @relationship_ns.doc(params={'label': 'PARENT/CHILDREN', 'id': 'Node ID'})
     def get(self, label, id):
         """
         Get the nodes along the relationship
+        Git:
+        https://git.indocresearch.org/charite/core/blob/k8s-dev/portal/backend/api/api_dataset/dataset_operation_neo4j.py#L274
         """
         # get from the query
         start = request.args.get('start', True)
@@ -198,52 +205,67 @@ class ActionOnNodeByRelationships(Resource):
 class ActionOnRelationshipByQuery(Resource):
     neo4j_method = Neo4jRelationship()
 
-    post_module = module_api.model('query_on_relation_between_nodes', {
+    post_module = module_api.model('relation_query_module', {
         'label': fields.String(readOnly=True, description='Label of relationship'),
-        'start_label': fields.String(readOnly=True, description='Label of start node'),
-        'end_label': fields.String(readOnly=True, description='Label of end node'),
-        'start_params': fields.Nested(node_query_module, readOnly=True, description='Json attributes start node has'),
-        'end_params': fields.Nested(node_query_module, readOnly=True, description='Json attributes end node has')
+        'start_label': fields.String(readOnly=True, description="Label of start node, normally use as 'User'"),
+        'end_label': fields.String(readOnly=True, description="Label of end node, normally use as 'Dataset"),
+        'start_params': fields.Raw(readOnly=True, description='Json attributes start node has, such as id, name, email and so on'),
+        'end_params': fields.Raw(readOnly=True, description='Json attributes end node has, such as id, code, name and so on')
     })
 
     complex_query_return = """
     [
-        {
-            "p": {
-                "test_grand_parent_dataset_0b42d471-63c8-4869-8972-26223806e9b4": {
-                    "id": 171,
-                    "children": {
-                        "test_parent_dataset_0b42d471-63c8-4869-8972-26223806e9b4": {
-                            "id": 170,
-                            "children": {}
+        {'end_node': {
+                'id': <node-id>, 
+                'labels': ['Dataset'], 
+                'path': <nfs-path>, 
+                'code': <project-code>, 
+                'time_lastmodified': <time-string>, 
+                'discoverable': True, 
+                'roles': [<project-role>], 
+                'name': <project-name>, 
+                'time_created': <time-string>,
+                'description: <project-description> 
+                'admin': ['admin'], 
+                'type': 'Usecase',
+                'tags': [<tags>]
+                        }, 
+         'p': {
+                'admin': {
+                        'id': 0,
+                        'children': {
+                                'NOV-1130-2': {
+                                        'id': 259, 
+                                        'children': {}
+                                                }
+                                    }
                         }
-                    }
-                }
-            },
-            "r": {
-                "type": "PARENT"
-            },
-            "node":{
-                "id": <ID>,
-                "labels": [
-                    <node-label>
-                ],
-                "path": <nfs-path>,
-                "time_lastmodified": <time-string>,
-                "name": <node-name>,
-                "time_created": <time-string>,
-                "other_property": "xxxx",
-                "other_property_2": "xxxx"
-            }
-        }
+                }, 
+         'r': {'type': <relation-label>},
+         'start_node': {
+                'id': <node-id>,
+                'labels': ['User'],
+                'path': 'users',
+                'time_lastmodified': <time-string>,
+                'role': 'admin', 
+                'last_login': '2020-12-01T16:13:30.103658', 
+                'name': 'admin', 
+                'last_name': 'admin', 
+                'first_name': 'admin', 
+                'email': 'siteadmin.test@vre.com', 
+                'status': 'active'
+                        }
+        }, 
     ]
     """
 
     @relationship_ns.expect(post_module)
     @relationship_ns.response(200, complex_query_return)
+    @relationship_ns.response(403, 'Exception')
     def post(self):
         """
         Get the relationship by the properties of node
+        Usage: used for getting all users in the project, or getting all admins, or check if relationship exists
         """
 
         # get the detail of the node infomation
@@ -278,7 +300,31 @@ class ActionOnRelationshipByQuery(Resource):
 class CountActionOnRelationshipByQuery(Resource):
     neo4j_method = Neo4jRelationship()
 
+    post_returns = """
+            {"count": <number-of-records>}
+        """
+
+    relation_query_module_count = module_api.model('relation_query_module_count', {
+        "count": fields.Boolean(readOnly=True, description='number of records'),
+        "partial": fields.Boolean(readOnly=True, description='whether enable partial search'),
+        "start_label": fields.String(readOnly=True,
+                                         description="Label of start node, normally use 'User'"),
+        "end_label": fields.String(readOnly=True,
+                                          description="Label of end node, normally use 'Dataset'"),
+        'start_params': fields.Raw(readOnly=True,
+                                        description="start_node(User) attributes, such as {'name': <user-name>} or {'email': <user-email>}"),
+        'end_params': fields.Raw(readOnly=True,
+                                      description="end_node(Dataset) attributes, such as {'code': <project-code>}")
+    })
+
+    @relationship_ns.expect(relation_query_module_count)
+    @relationship_ns.response(200, post_returns)
+    @relationship_ns.response(403, 'Exception')
     def post(self):
+        """
+        Count the number of relationships by the properties of node
+        Usage: used for getting number of pages in the project
+        """
         # get the detail of the node infomation
         post_data = request.get_json()
         # to see the end label and start label and also payload

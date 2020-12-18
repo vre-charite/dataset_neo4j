@@ -13,4 +13,3 @@ class ConfigClass(object):
 
     # the packaged modules
     api_modules = ["neo4j_api"]
-

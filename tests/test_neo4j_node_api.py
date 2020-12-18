@@ -49,6 +49,56 @@ class TestNeo4jNode(unittest.TestCase):
             self.assertEqual(self.attribute[x], response.get(x, None))
         self.test.delete_node(node_id, self.label)
 
+    def test_01_1_create_node(self):
+        self.log.info("\n")
+        self.log.info('01_1'+'test add_node'.center(80, '-'))
+        label = 'Dataset'
+        attr = {
+                  "name": "string",
+                  "path": "string",
+                  "email": "string",
+                  "first_name": "string",
+                  "last_name": "string",
+                  "role": "string",
+                  "status": "string",
+                  "code": "string",
+                  "discoverable": 'true',
+                  "roles": [
+                    "string"
+                  ],
+                  "type": "string",
+                  "tags": [
+                    "string"
+                  ],
+                  "metadatas": {
+                    "additionalProp1": "string",
+                    "additionalProp2": "string",
+                    "additionalProp3": "string"
+                  },
+                  "other_property_1": "string",
+                  "other_property_2": "string"
+                }
+        testing_api = "/v1/neo4j/nodes/%s" % self.label
+        self.log.info(f"POST API: {testing_api}")
+        try:
+            res = self.app.post("/v1/neo4j/nodes/%s" % self.label, json=self.attribute)
+            self.log.info(f"POST RESPONSE: {res}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            self.assertEqual(res.status_code, 200)
+        except Exception as e:
+            self.log.error(e)
+            raise e
+        response = res.json[0]
+        self.log.info(f"RESPONSE JSON: \n {response}")
+        node_id = response.get('id', None)
+        # check the payload is correct
+        self.log.info(f"COMPARING LABELS: {response['labels']} VS {self.label}")
+        self.assertEqual(response['labels'], [self.label])
+        # also check each attribute is correct
+        for x in self.attribute:
+            self.assertEqual(self.attribute[x], response.get(x, None))
+        self.test.delete_node(node_id, self.label)
+
     def test_01_2_create_node_with_relation(self):
         self.log.info("\n")
         self.log.info('01.2'+'test add_node_with_relation'.center(80, '-'))
@@ -597,6 +647,7 @@ class TestNeo4jNode(unittest.TestCase):
     #    except Exception as e:
     #        self.log.error(e)
     #        raise e
+
 
     def test_24_get_properties_test_label(self):
         self.log.info("\n")

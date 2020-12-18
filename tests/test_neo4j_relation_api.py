@@ -162,6 +162,7 @@ class TestNeo4jRelation(unittest.TestCase):
     #        self.log.error(e)
     #        raise e
 
+
     def test_04_create_relation_for_exist_node_id(self):
         self.log.info("\n")
         self.log.info('04' + 'test create_relation_for_exist_node_id'.center(80, '-'))
@@ -654,6 +655,7 @@ class TestNeo4jRelation(unittest.TestCase):
             self.log.error(e)
             raise e
 
+
     def test_21_get_relation_by_query(self):
         """
         response = {'end_node': {'id': 204,
@@ -779,7 +781,7 @@ class TestNeo4jRelation(unittest.TestCase):
             self.log.error(e)
             raise e
 
-    def test_23_get_relation_by_query_with_wrong_end_node_label(self):
+    def test_23_1_get_relation_by_query_with_wrong_end_node_label(self):
         self.log.info("\n")
         self.log.info('23' + 'test get_relation_by_query_wrong_end_node_label'.center(80, '-'))
         testing_api = '/v1/neo4j/relations/query'
@@ -802,7 +804,7 @@ class TestNeo4jRelation(unittest.TestCase):
             self.log.error(e)
             raise e
 
-    def test_23_get_relation_by_query_with_wrong_label(self):
+    def test_23_2_get_relation_by_query_with_wrong_label(self):
         self.log.info("\n")
         self.log.info('23' + 'test get_relation_by_query_wrong_label'.center(80, '-'))
         testing_api = '/v1/neo4j/relations/query'

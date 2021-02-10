@@ -277,6 +277,7 @@ class ActionOnRelationshipByQuery(Resource):
         start_params = post_data.get('start_params', None)
         end_params = post_data.get('end_params', None)
         partial = post_data.get('partial', False)
+        extra_query = post_data.get('extra_query', "")
         page_kwargs = {
             "limit": post_data.get("limit", None),
             "skip": post_data.get("skip", None),
@@ -287,7 +288,15 @@ class ActionOnRelationshipByQuery(Resource):
         # then call the function to see if we can get the infomation
         try:
             res = self.neo4j_method.get_relation_with_params(
-                label, start_label, end_label, start_params, end_params, partial=partial, page_kwargs=page_kwargs)
+                label, 
+                start_label, 
+                end_label, 
+                start_params, 
+                end_params, 
+                partial=partial, 
+                page_kwargs=page_kwargs,
+                extra_query=extra_query
+            )
         except Exception as e:
             return str(e), 403
         result = []
@@ -334,11 +343,12 @@ class CountActionOnRelationshipByQuery(Resource):
         start_params = post_data.get('start_params', None)
         end_params = post_data.get('end_params', None)
         partial = post_data.get('partial', False)
+        extra_query = post_data.get('extra_query', "")
 
         # then call the function to see if we can get the infomation
         try:
             res = self.neo4j_method.get_relation_with_params(
-                label, start_label, end_label, start_params, end_params, partial=partial, count=True)
+                label, start_label, end_label, start_params, end_params, partial=partial, count=True, extra_query=extra_query)
         except Exception as e:
             return str(e), 403
 

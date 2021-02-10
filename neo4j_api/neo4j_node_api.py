@@ -7,7 +7,8 @@ from utils import neo4j_obj_2_json, node_2_json
 from . import node_ns
 from neo4j_api.swagger_modules import (
     node_update_module, node_create_module,
-    node_query_module, node_query_module_count)
+    node_query_module, node_query_module_count, labels_module, node_query_module_v2)
+import math
 
 
 class ActionOnNodeById(Resource):
@@ -299,6 +300,7 @@ class ActionOnNodeByQuery(Resource):
         partial = False
         order_by = None
         order_type = None
+        is_all = None
         if post_data:
             if "partial" in post_data:
                 partial = post_data["partial"]
@@ -315,17 +317,29 @@ class ActionOnNodeByQuery(Resource):
             if "order_type" in post_data:
                 order_type = post_data["order_type"] 
                 del post_data["order_type"]
-
+            if "is_all" in post_data:
+                is_all = post_data["is_all"]
+                del post_data["is_all"]
         try:
-            nodes = self.node_method.query_node(
-                label, 
-                post_data, 
-                limit=limit, 
-                skip=skip, 
-                partial=partial, 
-                order_by=order_by,
-                order_type=order_type
-            )
+            nodes = []
+            if is_all:
+                nodes = self.node_method.query_node(
+                    label, 
+                    post_data, 
+                    partial=partial, 
+                    order_by=order_by,
+                    order_type=order_type
+                )
+            else:
+                nodes = self.node_method.query_node(
+                    label, 
+                    post_data, 
+                    limit=limit, 
+                    skip=skip, 
+                    partial=partial, 
+                    order_by=order_by,
+                    order_type=order_type
+                )
             result = [node_2_json(x) for x in nodes]
         except Exception as e:
             return str(e), 403
@@ -423,3 +437,113 @@ class ActionOnProperty(Resource):
             return str(e), 403
 
         return result, 200
+
+
+class ChangeLabels(Resource):
+    node_method = Neo4jClient()
+
+    put_returns = """
+    [
+        {
+            "id": <ID>,
+            "labels": [
+                <node-label>
+            ],
+            "name": <node-name>,
+            "time_created": <time-string>,
+            "time_lastmodified": <time-string>,
+            "other_property": "xxxx",
+            "other_property_2": "xxxx"
+        }
+    ])
+    """
+    @node_ns.expect(labels_module)
+    @node_ns.response(200, put_returns)
+    @node_ns.response(403, """Exception""")
+    def put(self, id):
+        """
+        Update the labels to match the given list
+        """
+        data = request.get_json()
+        labels = data.get("labels")
+        if not isinstance(labels, list):
+            return "labels must be list", 400
+        if not labels:
+            return "labels is required", 400
+
+        try:
+            result = self.node_method.change_labels(int(id), labels)
+            if result:
+                result = [node_2_json(result)]
+            else:
+                result = []
+        except Exception as e:
+            return str(e), 403
+
+        return result, 200
+
+
+class NodeQueryAPI(Resource):
+    node_method = Neo4jClient()
+    response = """
+    {   
+    'code': 200,
+    'error_msg': '',
+    'num_of_pages': 33,
+    'page': 0,
+    'result': [   {   'archived': False,
+                      'description': 'description',
+                      'file_size': 0,
+                      'full_path': 'test/zy//testzy6',
+                      'generate_id': '',
+                      'guid': '083a7459-9a2f-4b4d-bfe5-c1d683e1103c',
+                      'id': 59,
+                      'labels': ['Greenroom', 'Raw', 'File'],
+                      'name': 'testzy6',
+                      'path': 'test/zy/',
+                      'time_created': '2021-01-08T17:04:04',
+                      'time_lastmodified': '2021-01-08T17:04:04',
+                      'uploader': 'testzy'},
+    ],
+    'total': 806
+    }
+    """
+
+    @node_ns.response(200, response)
+    @node_ns.expect(node_query_module_v2)
+    def post(self):
+        data = request.get_json()
+        partial = data.pop("partial", False)
+        order_by = data.pop("order_by", None)
+        order_type = data.pop("order_type", None)
+        page = data.pop("page", 0)
+        page_size = data.pop("page_size", 25)
+        skip = page * page_size
+        limit = page_size
+        query = data.get("query")
+        if not query["labels"]:
+            return "labels is required in query", 400
+        labels = query.pop("labels")
+        try:
+            nodes = self.node_method.query_node(
+                labels,
+                query, 
+                limit=limit, 
+                skip=skip, 
+                partial=partial, 
+                order_by=order_by,
+                order_type=order_type
+            )
+            total = self.node_method.query_node(labels, query, count=True, partial=partial)
+            result = [node_2_json(x) for x in nodes]
+        except Exception as e:
+            return str(e), 403
+        response = {
+            'code': 200,
+            'error_msg': '',
+            'result': result,
+            'page': page,
+            'total': total,
+            'num_of_pages': math.ceil(total / page_size),
+        }
+        return response, 200

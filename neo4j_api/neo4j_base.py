@@ -11,8 +11,10 @@ from config import ConfigClass
 from utils import neo4j_obj_2_json, path_2_json, node_2_json
 from services.logger_services.logger_factory_service import SrvLoggerFactory
 from py2neo import Graph, Node, Relationship
-from py2neo.matching import RelationshipMatcher, NodeMatcher, CONTAINS 
+from py2neo.matching import RelationshipMatcher, NodeMatcher, CONTAINS, LIKE, OR
 import neotime
+import ast
+import re
 
 class Neo4jClient(object):
      
@@ -33,6 +35,13 @@ class Neo4jClient(object):
     def add_node(self, label, name, param={}):
         if label[0].isnumeric():
             raise Exception("Invalid input")
+
+        extra_labels = param.get("extra_labels")
+        if extra_labels:
+            if not isinstance(extra_labels, list):
+                raise Exception("extra_labels needs to be a list")
+            del param["extra_labels"]
+
         node = Node(
             label, 
             name=name,
@@ -40,6 +49,11 @@ class Neo4jClient(object):
             time_lastmodified=neotime.DateTime.utc_now(),
             **param,
         )
+
+        if extra_labels:
+            for label in extra_labels:
+                if not node.has_label(label):
+                    node.add_label(label)
         parent_id = param.pop("parent_id", None)
         parent_relation = param.pop("parent_relation", None)
         # if we have parent then add relationship
@@ -66,24 +80,82 @@ class Neo4jClient(object):
 
     def update_node(self, label, id, params={}, update_modified_time=True):
         node = self.get_node(label, id)
+
+        extra_labels = params.get("extra_labels")
+        if extra_labels:
+            if not isinstance(extra_labels, list):
+                raise Exception("extra_labels needs to be a list")
+            del params["extra_labels"]
+
         if update_modified_time:
             node.update(**params, time_lastmodified=neotime.DateTime.utc_now())
         else:
             node.update(**params)
+
+        if extra_labels:
+            for label in extra_labels:
+                if not node.has_label(label):
+                    node.add_label(label)
+        self.graph.push(node)
+        return node
+
+    def change_labels(self, id, labels):
+        node = self.graph.nodes.get(id)
+        node.clear_labels()
+        node.update_labels(labels)
         self.graph.push(node)
         return node
 
     def query_node(self, label, params=None, limit=None, skip=None, count=False, partial=False, order_by=None, order_type=None):
-        if partial:
-            for key, value in params.items():
-                if isinstance(value, str):
-                    params[key] = CONTAINS(value)
+        tags = [] 
+        query_params = {}
+        create_time = {} 
+        for key, value in params.items():
+            if "create_time" in key:
+                create_time[key] = value
+            elif key == "tags":
+                tags = value
+                if type(value) is str:
+                    tags = ast.literal_eval(value)
+            elif key == "description":
+                # LIKE uses a regex, so we use regex escape for special characters
+                #value = re.escape(value)
+                value = re.escape(value)
+                if partial:
+                    query_params[key] = LIKE(f"(?i)(?s)(?m).*{value}.*")
                 else:
-                    params[key] = value
-        if params:
-            query = self.nodes.match(label, **params)
+                    query_params[key] = LIKE(f"(?i)(?s)(?m){value}")
+            elif isinstance(value, str):
+                # LIKE uses a regex, so we use regex escape for special characters
+                value = re.escape(value)
+                if partial:
+                    query_params[key] = LIKE(f"(?i).*{value}.*")
+                else:
+                    query_params[key] = LIKE(f"(?i){value}")
+            elif key == "id":
+                query = self.nodes.match(label)
+                query = query.where("id(_) = %d" % value)
+                return query.all()
+            else:
+                query_params[key] = value
+
+        if isinstance(label, str):
+            label = [label]
+
+        if query_params:
+            query = self.nodes.match(*label, **query_params)
         else:
-            query = self.nodes.match(label)
+            query = self.nodes.match(*label)
+
+        if create_time:
+            start = create_time.get("create_time_start", datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"))
+            end = create_time.get("create_time_end", datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"))
+            query = query.where(f"datetime(_.time_created) > datetime('{start}')")
+            query = query.where(f"datetime(_.time_created) < datetime('{end}')")
+        if tags:
+            for tag in tags:
+                tag = tag.replace("\\", "\\\\")
+                query = query.where(f"'{tag}' IN _.tags")
 
         if count:
             return query.count()
@@ -108,8 +180,9 @@ class Neo4jClient(object):
             start_node = self.nodes.get(start_id)
         if end_id:
             end_node = self.nodes.get(end_id)
-
-        if not start_node and not end_node:
+        
+        # avoid case of id = 0 
+        if not str(start_node) or not str(end_node):
             return []
         if relation_label:
             return self.relationships.match((start_node, end_node), r_type=relation_label).all()
@@ -193,18 +266,27 @@ class Neo4jRelationship(object):
     def get_relation_with_params(self, relation_label=None,
                                  start_label=None, end_label=None,
                                  start_params=None, end_params=None, 
-                                 count=False, partial=False, page_kwargs={}):
+                                 count=False, partial=False, page_kwargs={}, extra_query=""):
         def format_label(label):
-            if(label):
-                return ':'+label
-            return ''
+            if isinstance(label, list):
+                result = ""
+                for l in label:
+                    if(l):
+                        result += ":" + l
+                return result
+            else:
+                if(label):
+                    return ':'+label
+                return ''
 
         relation_label = format_label(relation_label)
         start_label = format_label(start_label)
         end_label = format_label(end_label)
 
-        query = 'match p=(start_node%s)-[r%s]->(end_node%s) ' % (
-                start_label, relation_label,  end_label)
+        create_time = {}
+
+        query = 'match p=(start_node%s)-[r%s]->(end_node%s) %s' % (
+                start_label, relation_label, end_label, extra_query)
  
         if(isinstance(start_params, dict)):
             query += 'where'
@@ -217,8 +299,12 @@ class Neo4jRelationship(object):
                     query += ' Id(start_node) = {value} and'.format(value=value)
                 else:
                     if partial:
-                        query += ' start_node.{key} contains {value} and'.format(
-                            key=key, value=value)
+                        if key == 'name':
+                            query += ' start_node.{key} = {value} and'.format(
+                                key=key, value=value)
+                        else:
+                            query += ' start_node.{key} contains {value} and'.format(
+                                key=key, value=value)
                     else:
                         query += ' start_node.{key} = {value} and'.format(
                             key=key, value=value)
@@ -232,21 +318,47 @@ class Neo4jRelationship(object):
                 # id have special function
                 if key == 'id':
                     query += ' Id(end_node) = {value} and'.format(value=value)
+                elif "create_time" in key:
+                    create_time[key] = value
+                elif key == 'tags':
+                    for tag in value:
+                        tag = tag.replace("\\", "\\\\")
+                        query += f' "{tag}" IN end_node.tags and'
                 else:
-                    if partial and value:
-                        if key in ["container_id"]:
-                            query += ' end_node.{key} CONTAINS {value} and'.format(
-                                key=key, value=value)
-                        else:
-                            query += ' TOLOWER(end_node.{key}) CONTAINS TOLOWER({value}) and'.format(
-                                key=key, value=value)
+                    # Exclude from partial search in == is in value
+                    if value and isinstance(value, str) and value.startswith("'=="):
+                        value = "'" + value [3:]
+                        partial_exclude = True 
                     else:
-                        if key in ["container_id"]:
+                        partial_exclude = False 
+
+                    if partial_exclude or isinstance(value, bool) or isinstance(value, int):
+                        if key in ["container_id"] or isinstance(value, bool) or isinstance(value, int):
                             query += ' end_node.{key} = {value} and'.format(
                                 key=key, value=value)
                         else:
                             query += ' TOLOWER(end_node.{key}) = TOLOWER({value}) and'.format(
                                 key=key, value=value)
+                    else:
+                        if partial and value:
+                            if key in ["container_id"]:
+                                query += ' end_node.{key} CONTAINS {value} and'.format(
+                                    key=key, value=value)
+                            else:
+                                query += ' TOLOWER(end_node.{key}) CONTAINS TOLOWER({value}) and'.format(
+                                    key=key, value=value)
+                        else:
+                            if key in ["container_id"]:
+                                query += ' end_node.{key} = {value} and'.format(
+                                    key=key, value=value)
+                            else:
+                                query += ' TOLOWER(end_node.{key}) = TOLOWER({value}) and'.format(
+                                    key=key, value=value)
+            if create_time:
+                start = create_time.get("create_time_start", "'" + datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S") + "'")
+                end = create_time.get("create_time_end", "'" + datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S") + "'")
+                query += f" datetime(end_node.time_created) > datetime({start}) and"
+                query += f" datetime(end_node.time_created) < datetime({end}) and"
             query = query[:-3]
         if count:
             query += 'return count(*)'
@@ -254,7 +366,7 @@ class Neo4jRelationship(object):
             query += 'return *'
             if page_kwargs.get("order_by"):
                 order = page_kwargs['order_by']
-                query += f' ORDER BY start_node.{order}'
+                query += f' ORDER BY end_node.{order}'
             if page_kwargs.get("order_type"):
                 order_type = page_kwargs['order_type']
                 query += f' {order_type}'
@@ -264,6 +376,7 @@ class Neo4jRelationship(object):
             if page_kwargs.get("limit"):
                 limit = page_kwargs["limit"]
                 query += f' limit {limit}'
+
         neo4j_session = neo4j_connection.session()
         res = neo4j_session.run(query)
 

@@ -4,7 +4,7 @@ class ConfigClass(object):
 
     # graph database
     if os.environ['env'] == 'test':
-        NEO4J_URL = "bolt://10.3.7.219:7687"
+        NEO4J_URL = "bolt://10.3.7.229:7687"
     else:
         NEO4J_URL = "bolt://neo4j-db.utility:7687"
 

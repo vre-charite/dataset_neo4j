@@ -89,5 +89,73 @@ node_query_module_count = module_api.model('node_query_module_count', {
     "email (optional)": fields.String(readOnly=True, description="The characters that account 'email' contains for filtering"),
 })
 
+labels_module = module_api.model('labels_change', {
+    "labels": fields.List(fields.String, readOnly=True, description='List of labels the node will be updated to'),
+})
+
+file_module = module_api.model('file_create', {
+     "file_size": fields.Integer(description="file_size in bytes"),
+     "full_path": fields.String(description="full_path to file"),
+     "generate_id": fields.String(description="generate_id"),
+     "guid": fields.String(description="guid from atlas"),
+     "namespace": fields.String(description="greenroom or core"),
+     "type": fields.String(description="raw or processed"),
+     "uploader": fields.String(description="file uploader"),
+     "project_id": fields.Integer(description="neo4j id for dataset"),
+     "input_file_id": fields.Integer(description="neo4j id for input file to create relationship with"),
+     "process_pipeline": fields.String(description="name of pipeline"),
+})
+
+query = module_api.model('file_query', {
+    'archived': fields.Boolean(),
+    'description': fields.String(example="description"),
+    'file_size': fields.Integer(),
+    'full_path': fields.String(example="/data/vre-storage/tvb/raw/test_seeds"),
+    'generate_id': fields.String(),
+    'guid': fields.String(example="f1547da2-8372-4ae3-9e2b-17c80e97f113"),
+    'name': fields.String(example="testzy9.txt"),
+    'path': fields.String(example="test/zy"),
+    'time_created': fields.String(example="2021-01-08T17:09:51"),
+    'time_lastmodified': fields.String(example="2021-01-08T17:09:51"),
+    'uploader': fields.String(example="admin"),
+    'labels': fields.List(fields.String, example=['File', 'Greenroom', 'Raw']),
+})
+file_query_module = module_api.model('file_query_module', {
+     "page": fields.Integer(),
+     "page_size": fields.Integer(),
+     "partial": fields.Boolean(),
+     "order_by": fields.String(example="name"),
+     "order_type": fields.String(example="desc"),
+     "query": fields.Nested(query)
+})
+
+node_query = module_api.model('query', {
+    'archived': fields.Boolean(),
+    'description': fields.String(example="description"),
+    'file_size': fields.Integer(),
+    'full_path': fields.String(example="/data/vre-storage/tvb/raw/test_seeds"),
+    'generate_id': fields.String(),
+    'guid': fields.String(example="f1547da2-8372-4ae3-9e2b-17c80e97f113"),
+    'name': fields.String(example="testzy9.txt"),
+    'path': fields.String(example="test/zy"),
+    'time_created': fields.String(example="2021-01-08T17:09:51"),
+    'time_lastmodified': fields.String(example="2021-01-08T17:09:51"),
+    'uploader': fields.String(example="admin"),
+    'labels': fields.List(fields.String, example=['File', 'Greenroom', 'Raw']),
+})
+node_query_module_v2 = module_api.model('node_query', {
+     "page": fields.Integer(),
+     "page_size": fields.Integer(),
+     "partial": fields.Boolean(),
+     "order_by": fields.String(example="name"),
+     "order_type": fields.String(example="desc"),
+     "query": fields.Nested(node_query)
+})
+
+trashfile_module = module_api.model('file_trash', {
+     "trash_full_path": fields.String(description="full_path to trash file"),
+     "full_path": fields.String(description="full_path to file"),
+})
+
 
 #######################################################################

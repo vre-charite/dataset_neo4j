@@ -125,6 +125,8 @@ class Neo4jClient(object):
                     query_params[key] = LIKE(f"(?i)(?s)(?m).*{value}.*")
                 else:
                     query_params[key] = LIKE(f"(?i)(?s)(?m){value}")
+            elif key == "full_path" and not partial:
+                query_params[key] = value
             elif isinstance(value, str):
                 # LIKE uses a regex, so we use regex escape for special characters
                 value = re.escape(value)
@@ -266,7 +268,7 @@ class Neo4jRelationship(object):
     def get_relation_with_params(self, relation_label=None,
                                  start_label=None, end_label=None,
                                  start_params=None, end_params=None, 
-                                 count=False, partial=False, page_kwargs={}, extra_query=""):
+                                 count=False, partial=False, page_kwargs={}, extra_query="", sort_node="end"):
         def format_label(label):
             if isinstance(label, list):
                 result = ""
@@ -366,7 +368,10 @@ class Neo4jRelationship(object):
             query += 'return *'
             if page_kwargs.get("order_by"):
                 order = page_kwargs['order_by']
-                query += f' ORDER BY end_node.{order}'
+                if sort_node == "start":
+                    query += f' ORDER BY start_node.{order}'
+                else:
+                    query += f' ORDER BY end_node.{order}'
             if page_kwargs.get("order_type"):
                 order_type = page_kwargs['order_type']
                 query += f' {order_type}'

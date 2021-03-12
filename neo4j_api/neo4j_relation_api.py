@@ -276,6 +276,7 @@ class ActionOnRelationshipByQuery(Resource):
         end_label = post_data.get('end_label', None)
         start_params = post_data.get('start_params', None)
         end_params = post_data.get('end_params', None)
+        sort_node = post_data.get('sort_node', 'end')
         partial = post_data.get('partial', False)
         extra_query = post_data.get('extra_query', "")
         page_kwargs = {
@@ -295,7 +296,8 @@ class ActionOnRelationshipByQuery(Resource):
                 end_params, 
                 partial=partial, 
                 page_kwargs=page_kwargs,
-                extra_query=extra_query
+                extra_query=extra_query,
+                sort_node=sort_node,
             )
         except Exception as e:
             return str(e), 403

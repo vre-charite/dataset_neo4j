@@ -41,8 +41,6 @@ module_api = Api(version='1.0', title='Neo4j API',
 node_ns = module_api.namespace('Node', description='Operation on Neo4j Nodes', path ='/')
 # create namespace for relationship
 relationship_ns = module_api.namespace('Relationship', description='Operation on Neo4j Relationship', path ='/')
-# create namespace for file
-file_ns = module_api.namespace('File', description='Operation on Neo4j File nodes', path ='/')
 
 
 from .neo4j_node_api import (
@@ -61,7 +59,6 @@ from .neo4j_relation_api import (
 	CountActionOnRelationshipByQuery,
 	ActionOnNodeByRelationships,
 )
-from .file_api import FileAPI, DatasetFileQueryAPI, TrashFileAPI
 
 
 node_ns.add_resource(ActionOnNodeById, '/v1/neo4j/nodes/<label>/node/<id>')
@@ -79,10 +76,6 @@ relationship_ns.add_resource(RelationshipActionsLabelOption, '/v1/neo4j/relation
 relationship_ns.add_resource(ActionOnRelationshipByQuery, '/v1/neo4j/relations/query')
 relationship_ns.add_resource(CountActionOnRelationshipByQuery, '/v1/neo4j/relations/query/count')
 relationship_ns.add_resource(ActionOnNodeByRelationships, '/v1/neo4j/relations/<label>/node/<id>')
-
-file_ns.add_resource(FileAPI, '/v2/neo4j/files')
-file_ns.add_resource(TrashFileAPI, '/v2/neo4j/files/trash')
-file_ns.add_resource(DatasetFileQueryAPI, '/v2/neo4j/files/<dataset_id>/query')
 
 # # Actions on specific dataset
 # module_api.add_resource(dataset, '/v1/datasets/<dataset_id>')

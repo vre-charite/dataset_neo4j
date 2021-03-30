@@ -355,3 +355,128 @@ class CountActionOnRelationshipByQuery(Resource):
             return str(e), 403
 
         return {"count": res.value()[0]}, 200
+
+
+class RelationshipQueryV2(Resource):
+    client = Neo4jRelationship()
+
+    def post(self):
+        post_data = request.get_json()
+        start_label = post_data.get("start_label", None)
+        end_labels = post_data.get("end_labels", None)
+        query = post_data.get("query", {})
+        page_kwargs = {
+            "limit": post_data.get("limit", None),
+            "skip": post_data.get("skip", None),
+            "order_by": post_data.get("order_by"),
+            "order_type": post_data.get("order_type"),
+        }
+        if not query.get("start_params"):
+            return "start_params required", 400 
+        result = []
+        try:
+            res, total = self.client.relation_query_multiple_labels(start_label, end_labels, query_params=query, page_kwargs=page_kwargs)
+            for x in res:
+                result.append(neo4j_obj_2_json(x)["end_node"])
+        except Exception as e:
+            return str(e), 403
+        response = {
+            "results": result,
+            "total": total,
+        }
+        return response 
+
+class RelationConnected(Resource):
+    client = Neo4jRelationship()
+
+    get_return = """
+    {
+        "result": [
+            {
+                "id": 4637,
+                "labels": [
+                    "Greenroom",
+                    "Folder"
+                ],
+                "global_entity_id": "ebba4426-8b3a-11eb-8a88-eaff9e667817-1616437074",
+                "folder_level": 2,
+                "folder_relative_path": "a/b",
+                "time_lastmodified": "2021-03-22T18:17:54",
+                "uploader": "zhengyang",
+                "name": "c",
+                "time_created": "2021-03-22T18:17:54",
+                "project_code": "gregtest",
+                "priority": 0,
+                "tags": []
+            },
+            {
+                "id": 4693,
+                "labels": [
+                    "Greenroom",
+                    "Folder"
+                ],
+                "global_entity_id": "eb4e43ac-8b3a-11eb-99fe-eaff9e667817-1616437073",
+                "folder_level": 1,
+                "folder_relative_path": "a",
+                "time_lastmodified": "2021-03-22T18:17:53",
+                "uploader": "zhengyang",
+                "name": "b",
+                "time_created": "2021-03-22T18:17:53",
+                "project_code": "gregtest",
+                "priority": 0,
+                "tags": []
+            },
+            {
+                "id": 4690,
+                "labels": [
+                    "Greenroom",
+                    "Folder"
+                ],
+                "global_entity_id": "eb247a72-8b3a-11eb-be94-eaff9e667817-1616437073",
+                "folder_level": 0,
+                "folder_relative_path": "",
+                "time_lastmodified": "2021-03-22T18:17:53",
+                "uploader": "zhengyang",
+                "name": "a",
+                "time_created": "2021-03-22T18:17:53",
+                "project_code": "gregtest",
+                "priority": 0,
+                "tags": []
+            },
+            {
+                "id": 21,
+                "labels": [
+                    "Dataset"
+                ],
+                "global_entity_id": "dataset-4f640b7e-85be-11eb-99fe-eaff9e667817-1615833798",
+                "path": "gregtest",
+                "code": "gregtest",
+                "time_lastmodified": "2021-03-15T18:43:18",
+                "system_tags": [
+                    "copied-to-core"
+                ],
+                "discoverable": true,
+                "name": "gregtest",
+                "time_created": "2021-02-01T16:04:13",
+                "description": "test",
+                "type": "Usecase"
+            }
+        ]
+    }
+    """
+
+    @relationship_ns.response(200, get_return)
+    def get(self, geid):
+        client = Neo4jRelationship()
+        """
+        Get the nodes by the properties of node
+        """
+        try:
+            res = self.client.get_connected_nodes(geid)
+            result = []
+            for x in res:
+                result.append(neo4j_obj_2_json(x)["node"])
+            return {"result": result}, 200
+        except Exception as e:
+            print(e)
+            return str(e), 403

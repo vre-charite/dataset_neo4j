@@ -403,3 +403,72 @@ class Neo4jRelationship(object):
         res = neo4j_session.run(query, node_id=node_id)
 
         return res
+
+    def relation_query_multiple_labels(self, start_label, end_labels, query_params={}, page_kwargs={}):
+        start_query = query_params.get("start_params", {})
+        end_query = query_params.get("end_params", {})
+        neo_query = f"MATCH p=(start_node:{start_label}"
+        neo_params = {}
+        count = 0
+        for key, value in start_query.items():
+            neo_query += "{" + key + ":$start_value_" + str(count) + "}"
+            neo_params[f"start_value_{count}"] = value
+            count += 1
+        neo_query += ")-[r]->(end_node) WITH * "
+
+        neo_query += "WHERE "
+        count = 0
+        for label in end_labels:
+            neo_query += f"(end_node:{label}"
+            neo_params[f"end_label_{count}"] = label
+            param_count = 0
+            partial_fields = end_query.get(label, {}).pop("partial", [])
+            for key, value in end_query.get(label, {}).items():
+                if not isinstance(value, str) and key in partial_fields:
+                    raise "Only string parameters can use partial search"
+                if key == "id":
+                    neo_query += f" AND ID(end_node) = $end_query_value_{count}{param_count}"
+                #elif key in ["time_created", "time_lastmodified"]:
+                #    pass
+                else:
+                    if partial_fields and key in partial_fields:
+                        neo_query += f" AND TOLOWER(end_node.{key}) CONTAINS TOLOWER($end_query_value_{count}{param_count})"
+                    else:
+                        neo_query += f" AND end_node.{key} = $end_query_value_{count}{param_count}"
+                neo_params[f"end_query_value_{count}{param_count}"] = value 
+                param_count += 1
+            neo_query += ")"
+            count += 1
+            if count != len(end_labels):
+                neo_query += " OR "
+        neo_count = neo_query + " RETURN count(*)"
+        neo4j_session = neo4j_connection.session()
+        total = neo4j_session.run(neo_count, **neo_params)
+        total = total.value()[0]
+
+        neo_query += " RETURN *"
+        if page_kwargs.get("order_by"):
+            order = page_kwargs['order_by']
+            neo_query += f' ORDER BY end_node.{order}'
+        if page_kwargs.get("order_type"):
+            order_type = page_kwargs['order_type']
+            if not order_type.lower() in ["desc", "asc"]:
+                raise "Invalid order_type"
+            neo_query += f' {order_type}'
+        if page_kwargs.get("skip"):
+            skip = page_kwargs["skip"]
+            neo_query += f' skip {skip}'
+        if page_kwargs.get("limit"):
+            limit = page_kwargs["limit"]
+            neo_query += f' LIMIT {limit}'
+        neo4j_session = neo4j_connection.session()
+        result = neo4j_session.run(neo_query, **neo_params)
+        return result, total
+
+    def get_connected_nodes(self, global_entity_id):
+        neo4j_session = neo4j_connection.session()
+        query = 'MATCH ({global_entity_id: $geid})<-[:own*]-(connected) RETURN connected as node'
+
+        res = neo4j_session.run(query, geid=global_entity_id)
+
+        return res

@@ -1,0 +1,306 @@
+2021-01-18 15:20:21 INFO     TESTING NODE test_label CREATED WITH ATTRIBUTES {'name': 'start_node', 'test_original_key': 'test_original_start'}
+2021-01-18 15:20:21 INFO     TESTING NODE test_label CREATED WITH ATTRIBUTES {'name': 'end_node', 'test_original_key': 'test_original_end'}
+2021-01-18 15:20:21 INFO     
+
+2021-01-18 15:20:21 INFO     01.2---------------------------test create_relation_list----------------------------
+2021-01-18 15:20:21 INFO     POST API: /v1/neo4j/relations/TEST_RELATION
+2021-01-18 15:20:21 INFO     POST PAYLOAD: {'start_id': [1839], 'end_id': [1840]}
+2021-01-18 15:20:21 INFO     COMPARING: 403 VS 403
+2021-01-18 15:20:21 INFO     POST RESPONSE: b'"Both start_id and end_id can be the list"\n'
+2021-01-18 15:20:21 INFO     RESPONSE JSON: 
+ Both start_id and end_id can be the list
+2021-01-18 15:20:21 INFO     COMPARING: Both start_id and end_id can be the list VS Both start_id and end_id can be the list
+2021-01-18 15:20:21 INFO     
+
+2021-01-18 15:20:21 INFO     01.3-------------------------test create_relation_for_self--------------------------
+2021-01-18 15:20:21 INFO     POST API: /v1/neo4j/relations/TEST_RELATION
+2021-01-18 15:20:21 INFO     POST PAYLOAD: {'start_id': 1839, 'end_id': 1839}
+2021-01-18 15:20:21 INFO     COMPARING: 403 VS 403
+2021-01-18 15:20:21 INFO     POST RESPONSE: b'"Error cannot add yourself as parent/child"\n'
+2021-01-18 15:20:21 INFO     COMPARING: Error cannot add yourself as parent/child VS b'"Error cannot add yourself as parent/child"\n'
+2021-01-18 15:20:21 INFO     
+
+2021-01-18 15:20:21 INFO     01------------------------------test create_relation------------------------------
+2021-01-18 15:20:21 INFO     POST API: /v1/neo4j/relations/TEST_RELATION
+2021-01-18 15:20:21 INFO     POST PAYLOAD: {'start_id': 1839, 'end_id': 1840}
+2021-01-18 15:20:22 INFO     COMPARING: 200 VS 200
+2021-01-18 15:20:22 INFO     POST RESPONSE: b'"success"\n'
+2021-01-18 15:20:22 INFO     RESPONSE JSON: 
+ s
+2021-01-18 15:20:22 INFO     
+
+2021-01-18 15:20:22 INFO     02.1------------------------test create_relation_without_id-------------------------
+2021-01-18 15:20:22 INFO     POST API: /v1/neo4j/relations/TEST_RELATION
+2021-01-18 15:20:22 INFO     POST PAYLOAD: {'start_id': None, 'end_id': None}
+2021-01-18 15:20:22 INFO     COMPARING: 403 VS 403
+2021-01-18 15:20:22 INFO     POST RESPONSE: b'"start_id and end_id are required"\n'
+2021-01-18 15:20:22 INFO     COMPARING: start_id and end_id are required VS b'"start_id and end_id are required"\n'
+2021-01-18 15:20:22 INFO     
+
+2021-01-18 15:20:22 INFO     02-------------------test create_relation_without_start_node_id-------------------
+2021-01-18 15:20:22 INFO     POST API: /v1/neo4j/relations/TEST_RELATION
+2021-01-18 15:20:22 INFO     POST PAYLOAD: {'start_id': None, 'end_id': 1840}
+2021-01-18 15:20:22 INFO     COMPARING: 403 VS 200
+2021-01-18 15:20:22 INFO     POST RESPONSE: <Response streamed [403 FORBIDDEN]>
+2021-01-18 15:20:22 INFO     POST RESPONSE: b'"%d format: a number is required, not NoneType"\n'
+2021-01-18 15:20:22 INFO     RESPONSE JSON: 
+ %d format: a number is required, not NoneType
+2021-01-18 15:20:22 INFO     
+
+2021-01-18 15:20:22 INFO     04---------------------test create_relation_for_exist_node_id---------------------
+2021-01-18 15:20:22 INFO     POST API: /v1/neo4j/relations/TEST_RELATION
+2021-01-18 15:20:22 INFO     POST PAYLOAD: {'start_id': 1839, 'end_id': 1840}
+2021-01-18 15:20:22 INFO     COMPARING: 403 VS 403
+2021-01-18 15:20:22 INFO     POST RESPONSE: b'"dataset(s) already be the parent(s)."\n'
+2021-01-18 15:20:22 INFO     RESPONSE JSON: 
+ d
+2021-01-18 15:20:22 INFO     COMPARING: b'already be the parent(s)' IN b'"dataset(s) already be the parent(s)."\n'
+2021-01-18 15:20:22 INFO     
+
+2021-01-18 15:20:22 INFO     05-------------------------------test get_relation--------------------------------
+2021-01-18 15:20:22 INFO     GET API: /v1/neo4j/relations
+2021-01-18 15:20:22 INFO     GET PARAMS: {'label': 'TEST_RELATION', 'start_id': 1839, 'end_id': 1840}
+2021-01-18 15:20:23 INFO     GET RESPONSE: <Response streamed [200 OK]>
+2021-01-18 15:20:23 INFO     RESPONSE JSON: {'p': {'start_node': {'id': 1839, 'children': {'end_node': {'id': 1840, 'children': {}}}}}, 'r': {'type': 'TEST_RELATION', 'status': None}}
+2021-01-18 15:20:23 INFO     CHECK RELATION TYPE: TEST_RELATION VS TEST_RELATION
+2021-01-18 15:20:23 INFO     CHECK RELATION PARENT ID: 1839 VS 1839
+2021-01-18 15:20:23 INFO     CHECK RELATION CHILD ID: 1840 VS 1840
+2021-01-18 15:20:23 INFO     
+
+2021-01-18 15:20:23 INFO     06-----------------------test get_relation_with_wrong_label-----------------------
+2021-01-18 15:20:23 INFO     GET API: /v1/neo4j/relations
+2021-01-18 15:20:23 INFO     GET PARAMS: {'label': 'test_label', 'start_id': 1839, 'end_id': 1840}
+2021-01-18 15:20:23 INFO     GET RESPONSE: <Response streamed [200 OK]>
+2021-01-18 15:20:23 INFO     RESPONSE DATA: b'[]\n'
+2021-01-18 15:20:23 INFO     COMPARING RESPONSE: [] VS []
+2021-01-18 15:20:23 INFO     
+
+2021-01-18 15:20:23 INFO     07-----------------------test get_relation_with_reverse_id------------------------
+2021-01-18 15:20:23 INFO     GET API: /v1/neo4j/relations
+2021-01-18 15:20:23 INFO     GET PARAMS: {'label': 'TEST_RELATION', 'start_id': 1840, 'end_id': 1839}
+2021-01-18 15:20:23 INFO     GET RESPONSE: <Response streamed [200 OK]>
+2021-01-18 15:20:23 INFO     RESPONSE DATA: b'[]\n'
+2021-01-18 15:20:23 INFO     COMPARING RESPONSE: [] VS []
+2021-01-18 15:20:23 INFO     
+
+2021-01-18 15:20:23 INFO     08-----------------------test get_relation_without_child_id-----------------------
+2021-01-18 15:20:23 INFO     GET API: /v1/neo4j/relations
+2021-01-18 15:20:23 INFO     GET PARAMS: {'label': 'TEST_RELATION', 'start_id': 1839}
+2021-01-18 15:20:24 INFO     GET RESPONSE: <Response streamed [200 OK]>
+2021-01-18 15:20:24 INFO     RESPONSE DATA: b'[\n    {\n        "p": {\n            "start_node": {\n                "id": 1839,\n                "children": {\n                    "end_node": {\n                        "id": 1840,\n                        "children": {}\n                    }\n                }\n            }\n        },\n        "r": {\n            "type": "TEST_RELATION",\n            "status": null\n        }\n    }\n]\n'
+2021-01-18 15:20:24 INFO     RESPONSE JSON: {'p': {'start_node': {'id': 1839, 'children': {'end_node': {'id': 1840, 'children': {}}}}}, 'r': {'type': 'TEST_RELATION', 'status': None}}
+2021-01-18 15:20:24 INFO     CHECK RELATION TYPE: TEST_RELATION VS TEST_RELATION
+2021-01-18 15:20:24 INFO     CHECK RELATION PARENT ID: 1839 VS 1839
+2021-01-18 15:20:24 INFO     CHECK RELATION CHILD ID: 1840 VS 1840
+2021-01-18 15:20:24 INFO     
+
+2021-01-18 15:20:24 INFO     09----------------------test get_relation_without_parent_id-----------------------
+2021-01-18 15:20:24 INFO     GET API: /v1/neo4j/relations
+2021-01-18 15:20:24 INFO     GET PARAMS: {'label': 'TEST_RELATION', 'end_id': 1839}
+2021-01-18 15:20:24 INFO     GET RESPONSE: <Response streamed [200 OK]>
+2021-01-18 15:20:24 INFO     RESPONSE DATA: b'[]\n'
+2021-01-18 15:20:24 INFO     COMPARING RESPONSE: [] VS []
+2021-01-18 15:20:24 INFO     
+
+2021-01-18 15:20:24 INFO     10--------------------------test get_relation_without_id--------------------------
+2021-01-18 15:20:24 INFO     GET API: /v1/neo4j/relations
+2021-01-18 15:20:24 INFO     GET PARAMS: {'label': 'TEST_RELATION'}
+2021-01-18 15:20:24 INFO     GET RESPONSE: <Response streamed [403 FORBIDDEN]>
+2021-01-18 15:20:24 INFO     RESPONSE DATA: b'"start_id and end_id are required"\n'
+2021-01-18 15:20:24 INFO     COMPARING RESPONSE: start_id and end_id are required IN start_id and end_id are required
+2021-01-18 15:20:24 INFO     
+
+2021-01-18 15:20:24 INFO     11------------------------------test update_relation------------------------------
+2021-01-18 15:20:25 INFO     ORIGINAL RELATION TYPE: TEST_RELATION
+2021-01-18 15:20:25 INFO     PUT API: /v1/neo4j/relations/TEST_RELATION
+2021-01-18 15:20:25 INFO     PUT PAYLOAD: {'new_label': 'new_label', 'start_id': 1839, 'end_id': 1840}
+2021-01-18 15:20:26 INFO     PUT RESPONSE: b'"success"\n'
+2021-01-18 15:20:26 INFO     RESPONSE JSON: 
+ s
+2021-01-18 15:20:26 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:26 INFO     UPDATED RELATION TYPE: new_label
+2021-01-18 15:20:26 INFO     COMPARE ORIGIN LABEL VS NEW LABEL: TEST_RELATION VS new_label
+2021-01-18 15:20:26 INFO     
+
+2021-01-18 15:20:26 INFO     12----------------------test update_relation_with_same_value----------------------
+2021-01-18 15:20:27 INFO     ORIGINAL RELATION TYPE: new_label
+2021-01-18 15:20:27 INFO     PUT API: /v1/neo4j/relations/TEST_RELATION
+2021-01-18 15:20:27 INFO     PUT PAYLOAD: {'new_label': 'new_label', 'start_id': 1839, 'end_id': 1840}
+2021-01-18 15:20:28 INFO     PUT RESPONSE: b'"success"\n'
+2021-01-18 15:20:28 INFO     RESPONSE JSON: 
+ s
+2021-01-18 15:20:28 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:28 INFO     UPDATED RELATION TYPE: new_label
+2021-01-18 15:20:28 INFO     COMPARE ORIGIN LABEL VS NEW LABEL: new_label VS new_label
+2021-01-18 15:20:28 INFO     
+
+2021-01-18 15:20:28 INFO     13-----------------------test update_relation_without_label-----------------------
+2021-01-18 15:20:29 INFO     ORIGINAL RELATION TYPE: new_label
+2021-01-18 15:20:29 INFO     PUT API: /v1/neo4j/relations/TEST_RELATION
+2021-01-18 15:20:29 INFO     PUT PAYLOAD: {'start_id': 1839, 'end_id': 1840}
+2021-01-18 15:20:29 INFO     PUT RESPONSE: b'"start_id, new_label and end_id are required"\n'
+2021-01-18 15:20:29 INFO     RESPONSE JSON: 
+ s
+2021-01-18 15:20:29 INFO     COMPARING STATUS: 403 VS 403
+2021-01-18 15:20:29 INFO     COMPARING RESPONSE: start_id, new_label and end_id are required IN start_id, new_label and end_id are required
+2021-01-18 15:20:29 INFO     
+
+2021-01-18 15:20:29 INFO     14------------------------test update_relation_without_id-------------------------
+2021-01-18 15:20:29 INFO     ORIGINAL RELATION TYPE: new_label
+2021-01-18 15:20:29 INFO     PUT API: /v1/neo4j/relations/TEST_RELATION
+2021-01-18 15:20:29 INFO     PUT PAYLOAD: {'new_label': 'TEST_RELATION', 'start_id': 1839}
+2021-01-18 15:20:30 INFO     PUT RESPONSE: b'"start_id, new_label and end_id are required"\n'
+2021-01-18 15:20:30 INFO     RESPONSE JSON: 
+ s
+2021-01-18 15:20:30 INFO     COMPARING STATUS: 403 VS 403
+2021-01-18 15:20:30 INFO     COMPARING RESPONSE: start_id, new_label and end_id are required IN start_id, new_label and end_id are required
+2021-01-18 15:20:30 INFO     
+
+2021-01-18 15:20:30 INFO     15---------------------test update_relation_with_non_exist_id---------------------
+2021-01-18 15:20:30 INFO     ORIGINAL RELATION TYPE: new_label
+2021-01-18 15:20:30 INFO     PUT API: /v1/neo4j/relations/TEST_RELATION
+2021-01-18 15:20:30 INFO     PUT PAYLOAD: {'new_label': 'TEST_RELATION', 'start_id': 1839, 'end_id': 1}
+2021-01-18 15:20:30 INFO     PUT RESPONSE: b'"success"\n'
+2021-01-18 15:20:30 INFO     RESPONSE JSON: 
+ s
+2021-01-18 15:20:30 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:30 INFO     COMPARING RESPONSE: success IN success
+2021-01-18 15:20:30 INFO     
+
+2021-01-18 15:20:30 INFO     16------------------test update_relation_for_non_exist_relation-------------------
+2021-01-18 15:20:30 INFO     TESTING NODE test_label CREATED WITH ATTRIBUTES {'name': 'start_node', 'test_original_key': 'test_original_start'}
+2021-01-18 15:20:30 INFO     TEMP NODE CREATED WITH ID: 1841
+2021-01-18 15:20:30 INFO     PUT API: /v1/neo4j/relations/TEST_RELATION
+2021-01-18 15:20:30 INFO     PUT PAYLOAD: {'new_label': 'TEST_RELATION', 'start_id': 1839, 'end_id': 1841}
+2021-01-18 15:20:30 INFO     PUT RESPONSE: b'"success"\n'
+2021-01-18 15:20:30 INFO     RESPONSE JSON: 
+ success
+2021-01-18 15:20:30 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:30 INFO     COMPARING RESPONSE JSON: success VS success
+2021-01-18 15:20:30 INFO     =============Delete the testing node==============
+2021-01-18 15:20:31 WARNING  DELETING TESTING NODE: 1841
+2021-01-18 15:20:31 INFO     The testing node 1841 has been deleted, record: b'[]\n'"
+2021-01-18 15:20:31 INFO     
+
+2021-01-18 15:20:31 INFO     17-------------------------test get_end_node_by_relation--------------------------
+2021-01-18 15:20:31 INFO     GET START NODE API: /v1/neo4j/relations/new_label/node/1839
+2021-01-18 15:20:31 INFO     RESPONSE: <Response streamed [200 OK]>
+2021-01-18 15:20:31 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:31 INFO     COMPARING NODE ID: 1840 VS 1840
+2021-01-18 15:20:31 INFO     
+
+2021-01-18 15:20:31 INFO     18------------------------test get_start_node_by_relation-------------------------
+2021-01-18 15:20:31 INFO     GET END NODE API: /v1/neo4j/relations/new_label/node/1840
+2021-01-18 15:20:31 INFO     GET PARAMS: {'start': False}
+2021-01-18 15:20:31 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:31 INFO     COMPARING NODE ID: 1839 VS 1839
+2021-01-18 15:20:31 INFO     
+
+2021-01-18 15:20:31 INFO     19-------------------test get_start_node_by_non_exist_relation--------------------
+2021-01-18 15:20:31 INFO     GET END NODE API: /v1/neo4j/relations/fake_relation/node/1840
+2021-01-18 15:20:31 INFO     GET PARAMS: {'start': False}
+2021-01-18 15:20:31 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:31 INFO     RESPONSE: <Response streamed [200 OK]>, DATA: b'[]\n', JSON: []
+2021-01-18 15:20:31 INFO     COMPARING RESULT: [] VS []
+2021-01-18 15:20:31 INFO     
+
+2021-01-18 15:20:31 INFO     20-----------------------test get_none_exist_id_by_relation-----------------------
+2021-01-18 15:20:31 INFO     GET END NODE API: /v1/neo4j/relations/new_label/node/1
+2021-01-18 15:20:31 INFO     GET PARAMS: {'start': False}
+2021-01-18 15:20:31 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:31 INFO     RESPONSE: <Response streamed [200 OK]>, DATA: b'[]\n', JSON: []
+2021-01-18 15:20:31 INFO     COMPARING RESULT: [] VS []
+2021-01-18 15:20:31 INFO     
+
+2021-01-18 15:20:31 INFO     21---------------------------test get_relation_by_query---------------------------
+2021-01-18 15:20:31 INFO     POST API: /v1/neo4j/relations/query
+2021-01-18 15:20:31 INFO     POST PAYLOAD: {'label': 'new_label', 'start_label': 'test_label', 'end_label': 'test_label', 'start_params': {'name': 'start_node', 'test_original_key': 'test_original_start'}, 'end_params': {'name': 'end_node', 'test_original_key': 'test_original_end'}}
+2021-01-18 15:20:31 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:31 INFO     MATCHED RECORD: {'end_node': {'id': 1840, 'labels': ['test_label'], 'name': 'end_node', 'time_created': '2021-01-18T20:20:21', 'time_lastmodified': '2021-01-18T20:20:21', 'test_original_key': 'test_original_end'}, 'p': {'start_node': {'id': 1839, 'children': {'end_node': {'id': 1840, 'children': {}}}}}, 'r': {'type': 'new_label'}, 'start_node': {'id': 1839, 'labels': ['test_label'], 'name': 'start_node', 'time_created': '2021-01-18T20:20:21', 'time_lastmodified': '2021-01-18T20:20:21', 'test_original_key': 'test_original_start'}}
+2021-01-18 15:20:31 INFO     COMPARING end_node ID: 1840 VS 1840
+2021-01-18 15:20:31 INFO     COMPARING end_node labels: ['test_label'] VS ['test_label']
+2021-01-18 15:20:31 INFO     COMPARING end_node attribute: end_node VS end_node, test_original_end VS test_original_end
+2021-01-18 15:20:31 INFO     COMPARING p start_node id: 1839 VS 1839
+2021-01-18 15:20:31 INFO     COMPARING p start_node children node id: 1840 VS 1840
+2021-01-18 15:20:31 INFO     COMPARING r type: new_label VS new_label
+2021-01-18 15:20:31 INFO     COMPARING start_node id: 1839 VS 1839
+2021-01-18 15:20:31 INFO     COMPARING start_node label: ['test_label'] VS ['test_label']
+2021-01-18 15:20:31 INFO     COMPARING start_node attribute: start_node VS start_node, test_original_start VS test_original_start
+2021-01-18 15:20:31 INFO     
+
+2021-01-18 15:20:31 INFO     22-------------------test get_relation_by_query_with_only_label-------------------
+2021-01-18 15:20:31 INFO     POST API: /v1/neo4j/relations/query
+2021-01-18 15:20:31 INFO     POST PAYLOAD: {'label': 'new_label'}
+2021-01-18 15:20:31 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:31 INFO     MATCHED RECORD: {'end_node': {'id': 1840, 'labels': ['test_label'], 'name': 'end_node', 'time_created': '2021-01-18T20:20:21', 'time_lastmodified': '2021-01-18T20:20:21', 'test_original_key': 'test_original_end'}, 'p': {'start_node': {'id': 1839, 'children': {'end_node': {'id': 1840, 'children': {}}}}}, 'r': {'type': 'new_label'}, 'start_node': {'id': 1839, 'labels': ['test_label'], 'name': 'start_node', 'time_created': '2021-01-18T20:20:21', 'time_lastmodified': '2021-01-18T20:20:21', 'test_original_key': 'test_original_start'}}
+2021-01-18 15:20:31 INFO     COMPARING end_node ID: 1840 VS 1840
+2021-01-18 15:20:31 INFO     COMPARING end_node labels: ['test_label'] VS ['test_label']
+2021-01-18 15:20:31 INFO     COMPARING end_node attribute: end_node VS end_node, test_original_end VS test_original_end
+2021-01-18 15:20:31 INFO     COMPARING p start_node id: 1839 VS 1839
+2021-01-18 15:20:31 INFO     COMPARING p start_node children node id: 1840 VS 1840
+2021-01-18 15:20:31 INFO     COMPARING r type: new_label VS new_label
+2021-01-18 15:20:31 INFO     COMPARING start_node id: 1839 VS 1839
+2021-01-18 15:20:31 INFO     COMPARING start_node label: ['test_label'] VS ['test_label']
+2021-01-18 15:20:31 INFO     COMPARING start_node attribute: start_node VS start_node, test_original_start VS test_original_start
+2021-01-18 15:20:31 INFO     
+
+2021-01-18 15:20:31 INFO     23----------------test get_relation_by_query_wrong_end_node_label-----------------
+2021-01-18 15:20:31 INFO     POST API: /v1/neo4j/relations/query
+2021-01-18 15:20:31 INFO     POST PAYLOAD: {'label': 'new_label', 'start_label': 'test_label', 'end_label': 'someother_label', 'start_params': {'name': 'start_node', 'test_original_key': 'test_original_start'}, 'end_params': {'name': 'end_node', 'test_original_key': 'test_original_end'}}
+2021-01-18 15:20:31 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:31 INFO     COMPARING RESPONSE: [] VS []
+2021-01-18 15:20:31 INFO     
+
+2021-01-18 15:20:31 INFO     23---------------------test get_relation_by_query_wrong_label---------------------
+2021-01-18 15:20:31 INFO     POST API: /v1/neo4j/relations/query
+2021-01-18 15:20:31 INFO     POST PAYLOAD: {'label': 'OTHER_RELATION', 'start_label': 'test_label', 'end_label': 'test_label', 'start_params': {'name': 'start_node', 'test_original_key': 'test_original_start'}, 'end_params': {'name': 'end_node', 'test_original_key': 'test_original_end'}}
+2021-01-18 15:20:31 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:31 INFO     COMPARING RESPONSE: [] VS []
+2021-01-18 15:20:31 INFO     
+
+2021-01-18 15:20:31 INFO     24.1--------------test get_relation_by_query_with_relation_label_none---------------
+2021-01-18 15:20:31 INFO     POST API: /v1/neo4j/relations/query
+2021-01-18 15:20:31 INFO     POST PAYLOAD: {'label': 'new_label', 'start_label': 'test_label', 'end_label': 'test_label', 'start_params': {'name': 'start_node', 'test_original_key': 'test_original_start', 'id': 1839}, 'end_params': {'name': 'end_node', 'test_original_key': 'test_original_end', 'id': 1840}}
+2021-01-18 15:20:32 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:32 INFO     MATCHED RECORD: {'end_node': {'id': 1840, 'labels': ['test_label'], 'name': 'end_node', 'time_created': '2021-01-18T20:20:21', 'time_lastmodified': '2021-01-18T20:20:21', 'test_original_key': 'test_original_end'}, 'p': {'start_node': {'id': 1839, 'children': {'end_node': {'id': 1840, 'children': {}}}}}, 'r': {'type': 'new_label'}, 'start_node': {'id': 1839, 'labels': ['test_label'], 'name': 'start_node', 'time_created': '2021-01-18T20:20:21', 'time_lastmodified': '2021-01-18T20:20:21', 'test_original_key': 'test_original_start'}}
+2021-01-18 15:20:32 INFO     COMPARING end_node ID: 1840 VS 1840
+2021-01-18 15:20:32 INFO     COMPARING end_node labels: ['test_label'] VS ['test_label']
+2021-01-18 15:20:32 INFO     COMPARING end_node attribute: end_node VS end_node, test_original_end VS test_original_end
+2021-01-18 15:20:32 INFO     COMPARING p start_node id: 1839 VS 1839
+2021-01-18 15:20:32 INFO     COMPARING p start_node children node id: 1840 VS 1840
+2021-01-18 15:20:32 INFO     COMPARING r type: new_label VS new_label
+2021-01-18 15:20:32 INFO     COMPARING start_node id: 1839 VS 1839
+2021-01-18 15:20:32 INFO     COMPARING start_node label: ['test_label'] VS ['test_label']
+2021-01-18 15:20:32 INFO     COMPARING start_node attribute: start_node VS start_node, test_original_start VS test_original_start
+2021-01-18 15:20:32 INFO     
+
+2021-01-18 15:20:32 INFO     24--------------test get_relation_by_query_with_relation_label_none---------------
+2021-01-18 15:20:32 INFO     POST API: /v1/neo4j/relations/query
+2021-01-18 15:20:32 INFO     POST PAYLOAD: {'label': None, 'start_label': 'test_label', 'end_label': 'test_label', 'start_params': {'name': 'start_node', 'test_original_key': 'test_original_start', 'id': 1839}, 'end_params': {'name': 'end_node', 'test_original_key': 'test_original_end', 'id': 1840}}
+2021-01-18 15:20:32 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:32 INFO     MATCHED RECORD: {'end_node': {'id': 1840, 'labels': ['test_label'], 'name': 'end_node', 'time_created': '2021-01-18T20:20:21', 'time_lastmodified': '2021-01-18T20:20:21', 'test_original_key': 'test_original_end'}, 'p': {'start_node': {'id': 1839, 'children': {'end_node': {'id': 1840, 'children': {}}}}}, 'r': {'type': 'new_label'}, 'start_node': {'id': 1839, 'labels': ['test_label'], 'name': 'start_node', 'time_created': '2021-01-18T20:20:21', 'time_lastmodified': '2021-01-18T20:20:21', 'test_original_key': 'test_original_start'}}
+2021-01-18 15:20:32 INFO     COMPARING end_node ID: 1840 VS 1840
+2021-01-18 15:20:32 INFO     COMPARING end_node labels: ['test_label'] VS ['test_label']
+2021-01-18 15:20:32 INFO     COMPARING end_node attribute: end_node VS end_node, test_original_end VS test_original_end
+2021-01-18 15:20:32 INFO     COMPARING p start_node id: 1839 VS 1839
+2021-01-18 15:20:32 INFO     COMPARING p start_node children node id: 1840 VS 1840
+2021-01-18 15:20:32 INFO     COMPARING r type: new_label VS new_label
+2021-01-18 15:20:32 INFO     COMPARING start_node id: 1839 VS 1839
+2021-01-18 15:20:32 INFO     COMPARING start_node label: ['test_label'] VS ['test_label']
+2021-01-18 15:20:32 INFO     COMPARING start_node attribute: start_node VS start_node, test_original_start VS test_original_start
+2021-01-18 15:20:32 INFO     
+
+2021-01-18 15:20:32 INFO     25---------------test get_relation_by_query_without_relation_label----------------
+2021-01-18 15:20:32 INFO     POST API: /v1/neo4j/relations/query
+2021-01-18 15:20:32 INFO     POST PAYLOAD: {}
+2021-01-18 15:20:34 INFO     COMPARING STATUS: 200 VS 200
+2021-01-18 15:20:34 INFO     MATCHED RECORD: {'end_node': {'id': 1840, 'labels': ['test_label'], 'name': 'end_node', 'time_created': '2021-01-18T20:20:21', 'time_lastmodified': '2021-01-18T20:20:21', 'test_original_key': 'test_original_end'}, 'p': {'start_node': {'id': 1839, 'children': {'end_node': {'id': 1840, 'children': {}}}}}, 'r': {'type': 'new_label'}, 'start_node': {'id': 1839, 'labels': ['test_label'], 'name': 'start_node', 'time_created': '2021-01-18T20:20:21', 'time_lastmodified': '2021-01-18T20:20:21', 'test_original_key': 'test_original_start'}}
+2021-01-18 15:20:34 INFO     COMPARING end_node ID: 1840 VS 1840
+2021-01-18 15:20:34 INFO     COMPARING end_node labels: ['test_label'] VS ['test_label']
+2021-01-18 15:20:34 INFO     COMPARING end_node attribute: end_node VS end_node, test_original_end VS test_original_end
+2021-01-18 15:20:34 INFO     COMPARING p start_node id: 1839 VS 1839
+2021-01-18 15:20:34 INFO     COMPARING p start_node children node id: 1840 VS 1840
+2021-01-18 15:20:34 INFO     COMPARING r type: new_label VS new_label
+2021-01-18 15:20:34 INFO     COMPARING start_node id: 1839 VS 1839
+2021-01-18 15:20:34 INFO     COMPARING start_node label: ['test_label'] VS ['test_label']
+2021-01-18 15:20:34 INFO     COMPARING start_node attribute: start_node VS start_node, test_original_start VS test_original_start

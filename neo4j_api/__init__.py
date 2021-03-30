@@ -58,6 +58,8 @@ from .neo4j_relation_api import (
 	ActionOnRelationshipByQuery,
 	CountActionOnRelationshipByQuery,
 	ActionOnNodeByRelationships,
+	RelationshipQueryV2,
+	RelationConnected
 )
 
 
@@ -75,7 +77,10 @@ relationship_ns.add_resource(RelationshipActionsLabelOption, '/v1/neo4j/relation
 
 relationship_ns.add_resource(ActionOnRelationshipByQuery, '/v1/neo4j/relations/query')
 relationship_ns.add_resource(CountActionOnRelationshipByQuery, '/v1/neo4j/relations/query/count')
+relationship_ns.add_resource(RelationshipQueryV2, '/v2/neo4j/relations/query')
 relationship_ns.add_resource(ActionOnNodeByRelationships, '/v1/neo4j/relations/<label>/node/<id>')
+
+relationship_ns.add_resource(RelationConnected, '/v1/neo4j/relations/connected/<geid>')
 
 # # Actions on specific dataset
 # module_api.add_resource(dataset, '/v1/datasets/<dataset_id>')

@@ -46,7 +46,6 @@ def path_2_json(obj):
     for r in obj.relationships:
 
         start_node = node_2_json(r.start_node)
-        # print(start_node)
         temp = current_node_tree.get(start_node["name"], None)
         # print(temp)
         # if we are not at the end

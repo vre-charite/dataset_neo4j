@@ -1,37 +1,140 @@
 import unittest
+import sys
+import json
+import os
+import shutil
+import time
+import copy
+import pytest
 from tests.logger import Logger
 from tests.prepare_test import SetUpTest
+from config import ConfigClass
 
 
-class TestNeo4jNode(unittest.TestCase):
+def skipIfTrue(flag):
+    def deco(f):
+        def wrapper(self, *args, **kwargs):
+            if getattr(self, flag):
+                self.skipTest('Skipped by condition')
+            else:
+                f(self, *args, **kwargs)
+        return wrapper
+    return deco
+
+#@unittest.skip('not used for now')
+class TestNeo4jDataset(unittest.TestCase):
     # some node properties
-    node_name = "test_node"
-    label = "test_label"
-    attribute = {
-        "name": label,
-        "test_original_key": "test_original_value"
-    }
+    label = "Dataset"
+    #dataset for put, get 
+    dataset_id = None
+    #update label
+    update_dataset_id = None
+    #delete
+    delete_dataset_id = None
+    #total dataset in the dataset
     # some of the attribute return from neo4j
-    node_id = None
-    log = Logger(name='test_neo4j_node_api.log')
+    payload = {
+            "name": "Unittest_dataset",
+            "path": "utest",
+            "code": "utest",
+            "description": "unit test dataset, will be deleted soon",
+            "discoverable": True,
+            "type": "Dataset",
+            "tags": [
+                "tag1"
+            ]
+        }
+
+    attribute = {
+        "name": "Unittest_dataset",
+        "path": "ctest",
+        "code": "ctest",
+        "description": "unit test dataset, will be deleted soon",
+        "discoverable": True,
+        "type": "Dataset",
+        "tags": [
+            "tag1"
+            ]
+    }
+
+    update_attribute = {
+            "name": "update_dataset_info",
+            "discoverable": "False",
+            "description": "test upadate description for unit test will be deleted soon.",
+        }
+
+    # required key to update payload
+    payload_key = ["path", "code"]
+    # identity key in response body
+    property_key = ["code", "id"]
+    query = {
+            "page": 0,
+            "page_size": 25,
+            "partial": True,
+            "order_by": "id",
+            "order_type": "desc",
+            "query": {
+                "name": "Unittest_dataset",
+                "labels": [
+                    label
+                    ]
+                }
+            }
+
+    #is_delete = False
+    log = Logger(name='test_neo4j_dataset.log')
 
     test = SetUpTest(log)
 
+    @classmethod
+    def setup_class(cls):
+        cls.log = cls.test.log
+        cls.app = cls.test.app
+        #self.node_id = self.test.create_node(self.label, self.attribute)
+        cls.log.info("Preparing test".ljust(80, '-'))
+        try:
+            # create node for dataset_id
+            cls.dataset_id = cls.test.create_node(cls.label, cls.payload)
+            # create node for update_dataset_id
+            copy_payload = copy.deepcopy(cls.payload)
+            for i in cls.payload_key:
+                copy_payload[i] = copy_payload[i] + "up"
+            cls.update_dataset_id = cls.test.create_node(cls.label, copy_payload)
+            # create node for delete_dataset_id
+            copy_payload = copy.deepcopy(cls.payload)
+            for i in cls.payload_key:
+                copy_payload[i] = copy_payload[i] + "d"
+            cls.delete_dataset_id = cls.test.create_node(cls.label, copy_payload)
+        except Exception as e:
+            cls.log.error(f"Error happened during setup: {e}")
+            raise unittest.SkipTest(f"Failed setup test {e}")
+
+    @classmethod
+    def teardown_class(cls):
+        cls.log.info("\n")
+        cls.log.info("START TEAR DOWN PROCESS".ljust(80, '-'))
+        cls.test.delete_node(cls.dataset_id, cls.label)
+        cls.test.delete_node(cls.update_dataset_id, cls.label)
+        #cls.test.delete_node(cls.delete_dataset_id, cls.label)
+    
     def setUp(self):
-        self.log = self.test.log
-        self.app = self.test.app
-        self.node_id = self.test.create_node(self.label, self.attribute)
+        if self.label == "User":
+            self.skip_condition = False
+            self.skip_only = True
+        elif self.label == "Dataset":
+            self.skip_only = False
+            self.skip_condition = True
+        else:
+            self.skip_only = True
+            self.skip_condition = True
 
-    def tearDown(self):
-        self.test.delete_node(self.node_id, self.label)
-
-    def test_01_create_node(self):
+    def test_01_0_create_dataset(self):
         self.log.info("\n")
-        self.log.info('01'+'test add_node'.center(80, '-'))
+        self.log.info('01'+f'test create {self.label}'.center(80, '-'))
         testing_api = "/v1/neo4j/nodes/%s" % self.label
         self.log.info(f"POST API: {testing_api}")
         try:
-            res = self.app.post("/v1/neo4j/nodes/%s" % self.label, json=self.attribute)
+            res = self.app.post("/v1/neo4j/nodes/%s" % self.label, json = self.attribute)
             self.log.info(f"POST RESPONSE: {res}")
             self.log.info(f"COMPARING: {res.status_code} VS {200}")
             self.assertEqual(res.status_code, 200)
@@ -40,665 +143,676 @@ class TestNeo4jNode(unittest.TestCase):
             raise e
         response = res.json[0]
         self.log.info(f"RESPONSE JSON: \n {response}")
-        node_id = response.get('id', None)
+        create_id = response.get('id', None)
         # check the payload is correct
         self.log.info(f"COMPARING LABELS: {response['labels']} VS {self.label}")
         self.assertEqual(response['labels'], [self.label])
         # also check each attribute is correct
         for x in self.attribute:
+            self.log.info(f"COMPARING ATTRIBUTE of {x}: {self.attribute[x]} VS {response.get(x, None)}")
             self.assertEqual(self.attribute[x], response.get(x, None))
-        self.test.delete_node(node_id, self.label)
+        self.test.delete_node(create_id, self.label)
 
-    def test_01_1_create_node(self):
+    @skipIfTrue("skip_only")
+    def test_01_1_create_dataset_with_exist_code(self):
         self.log.info("\n")
-        self.log.info('01_1'+'test add_node'.center(80, '-'))
-        label = 'Dataset'
-        attr = {
-                  "name": "string",
-                  "path": "string",
-                  "email": "string",
-                  "first_name": "string",
-                  "last_name": "string",
-                  "role": "string",
-                  "status": "string",
-                  "code": "string",
-                  "discoverable": 'true',
-                  "roles": [
-                    "string"
-                  ],
-                  "type": "string",
-                  "tags": [
-                    "string"
-                  ],
-                  "metadatas": {
-                    "additionalProp1": "string",
-                    "additionalProp2": "string",
-                    "additionalProp3": "string"
-                  },
-                  "other_property_1": "string",
-                  "other_property_2": "string"
-                }
+        self.log.info('01.1'+ f'test create {self.label} with exist code'.center(80, '-'))
         testing_api = "/v1/neo4j/nodes/%s" % self.label
         self.log.info(f"POST API: {testing_api}")
         try:
-            res = self.app.post("/v1/neo4j/nodes/%s" % self.label, json=self.attribute)
-            self.log.info(f"POST RESPONSE: {res}")
-            self.log.info(f"COMPARING: {res.status_code} VS {200}")
-            self.assertEqual(res.status_code, 200)
-        except Exception as e:
-            self.log.error(e)
-            raise e
-        response = res.json[0]
-        self.log.info(f"RESPONSE JSON: \n {response}")
-        node_id = response.get('id', None)
-        # check the payload is correct
-        self.log.info(f"COMPARING LABELS: {response['labels']} VS {self.label}")
-        self.assertEqual(response['labels'], [self.label])
-        # also check each attribute is correct
-        for x in self.attribute:
-            self.assertEqual(self.attribute[x], response.get(x, None))
-        self.test.delete_node(node_id, self.label)
-
-    def test_01_2_create_node_with_relation(self):
-        self.log.info("\n")
-        self.log.info('01.2'+'test add_node_with_relation'.center(80, '-'))
-        testing_api = "/v1/neo4j/nodes/%s" % self.label
-        self.log.info(f"POST API: {testing_api}")
-        attribute = {
-            "name": self.label,
-            "parent_id": self.node_id,
-            "parent_relation": "test_relation",
-            "test_original_key": "test_original_value"
-        }
-        try:
-            res = self.app.post("/v1/neo4j/nodes/%s" % self.label, json=attribute)
-            self.log.info(f"POST RESPONSE: {res}")
-            self.log.info(f"COMPARING: {res.status_code} VS {200}")
-            self.assertEqual(res.status_code, 200)
-        except Exception as e:
-            self.log.error(e)
-            raise e
-        response = res.json[0]
-        self.log.info(f"RESPONSE JSON: \n {response}")
-        node_id = response.get('id', None)
-        # check the payload is correct
-        self.log.info(f"COMPARING LABELS: {response['labels']} VS {self.label}")
-        self.assertEqual(response['labels'], [self.label])
-        # also check each attribute is correct
-        for x in self.attribute:
-            self.assertEqual(self.attribute[x], response.get(x, None))
-        self.test.delete_node(node_id, self.label)
-
-    def test_02_create_node_empty_label(self):
-        self.log.info('\n')
-        self.log.info('02'+'test add_node with empty label'.center(80, '-'))
-        label= ""
-        attribute = {
-            "name": label,
-            "test_original_key": "test_original_value"
-        }
-        testing_api = "/v1/neo4j/nodes/%s" % label
-        self.log.info(f"POST API: {testing_api}")
-        try:
-            res = self.app.post(testing_api, json=attribute)
-            self.log.info(f"POST RESPONSE: {res}")
-            self.log.info(f"RESPONSE DATA: {res.data}")
-            self.log.info(f"COMPARING: {res.status_code} VS {404}")
-            self.assertEqual(res.status_code, 404)
-            self.log.info(f"COMPARING: {b'The requested URL was not found on the server'} "
-                          f"IN {res.data}")
-            self.assertTrue(b"The requested URL was not found on the server" in res.data)
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def test_03_create_node_int_label(self):
-        self.log.info('\n')
-        self.log.info('03'+'test add_node with integer label'.center(80, '-'))
-        label= 9
-        attribute = {
-            "name": label,
-            "test_original_key": "test_original_value"
-        }
-        testing_api = "/v1/neo4j/nodes/%s" % label
-        self.log.info(f"POST API: {testing_api}")
-        try:
-            res = self.app.post(testing_api, json=attribute)
+            res = self.app.post(testing_api, json=self.payload)
             self.log.info(f"POST RESPONSE: {res}")
             self.log.info(f"RESPONSE DATA: {res.data}")
             self.log.info(f"COMPARING: {res.status_code} VS {403}")
             self.assertEqual(res.status_code, 403)
-            self.log.info(f"COMPARING: {b'Invalid input'} IN {res.data}")
-            self.assertTrue(b"Invalid input" in res.data)
+            #self.log.info(f"COMPARING: {b'The requested URL was not found on the server'} "
+                          #f"IN {res.data}")
+            #self.assertTrue(b"The requested URL was not found on the server" in res.data)
         except Exception as e:
             self.log.error(e)
             raise e
 
-    def test_04_create_node_list_label(self):
+    #@unittest.skip
+    def test_01_2_create_dataset_with_integer_label(self):
         self.log.info("\n")
-        self.log.info('04'+'test add_node with list label'.center(80, '-'))
-        attribute = {
-            "name": [self.label],
-            "test_original_key": "test_original_value"
-        }
-        testing_api = "/v1/neo4j/nodes/%s" % self.label
+        self.log.info('01.2'+ f'test create {self.label} with empty code'.center(80, '-'))
+        int_label = 6
+        testing_api = "/v1/neo4j/nodes/%s" % int_label
         self.log.info(f"POST API: {testing_api}")
         try:
-            res = self.app.post(testing_api, json=attribute)
+            res = self.app.post(testing_api, json=self.attribute)
             self.log.info(f"POST RESPONSE: {res}")
+            self.log.info(f"RESPONSE DATA: {res.data}")
+            self.log.info(f"COMPARING: {res.status_code} VS {403}")
+            self.assertEqual(res.status_code, 403)
+            #self.log.info(f"COMPARING: {b'The requested URL was not found on the server'} "
+                          #f"IN {res.data}")
+            #self.assertTrue(b"The requested URL was not found on the server" in res.data)
+        except Exception as e:
+            self.log.error(e)
+            raise e
+
+    
+    #@unittest.skip
+    def test_02_0_update_dataset(self):
+        self.log.info("\n")
+        self.log.info('02'+ f'test update {self.label}'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, self.update_dataset_id)
+        self.log.info(f"PUT API: {testing_api}")
+        try:
+            res = self.app.put(testing_api, json=self.update_attribute)
+            self.log.info(f"PUT RESPONSE: {res}")
             self.log.info(f"RESPONSE DATA: {res.data}")
             self.log.info(f"COMPARING: {res.status_code} VS {200}")
             self.assertEqual(res.status_code, 200)
             response = res.json[0]
-            node_id = response.get('id', None)
-            self.test.delete_node(node_id, self.label)
+            self.log.info(f"COMPARING LABELS: {response['labels']} VS {self.label}")
+            self.assertIn(self.label, response['labels'])
+            for x in self.update_attribute:
+                self.assertEqual(self.update_attribute[x], response.get(x, None))
         except Exception as e:
             self.log.error(e)
             raise e
 
-    #def test_05_create_node_list_multiple_labels(self):
-    #    self.log.info("\n")
-    #    self.log.info('05'+'test add_node with list of multiple labels'.center(80, '-'))
-    #    label = [self.label, 'new_label']
-    #    attribute = {
-    #        "name": label,
-    #        "test_original_key": "test_original_value"
-    #    }
-    #    testing_api = "/v1/neo4j/nodes/%s" % label
-    #    self.log.info(f"POST API: {testing_api}")
-    #    try:
-    #        res = self.app.post(testing_api, json=attribute)
-    #        self.log.info(f"POST RESPONSE: {res}")
-    #        self.log.info(f"RESPONSE DATA: {res.data}")
-    #        self.log.info(f"COMPARING: {res.status_code} VS {403}")
-    #        self.assertEqual(res.status_code, 403)
-    #        self.log.info(f"COMPARING: {b'Invalid input'} IN {res.data}")
-    #        self.assertIn(b"Invalid input", res.data)
-    #    except Exception as e:
-    #        self.log.error(e)
-    #        raise e
-
-    def test_06_retrieve_node(self):
+    #@unittest.skip
+    def test_02_1_update_dataset_with_wrong_id(self):
         self.log.info("\n")
-        self.log.info('06'+'test retrieve_node'.center(80, '-'))
-        testing_api = "/v1/neo4j/nodes/%s/node/%d"%(self.label, self.node_id)
-        self.log.info(f"POST API: {testing_api}")
-        res = self.app.get(testing_api)
-        self.log.info(f"POST RESPONSE: {res}")
+        self.log.info('02.1'+ f'test update {self.label} with not exist id'.center(80, '-'))
+        not_exist_id = 14159265
+        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, not_exist_id)
+        self.log.info(f"PUT API: {testing_api}")
         try:
-            self.log.info(f"COMPARING: {res.status_code} VS {200}")
-            self.assertEqual(res.status_code, 200)
-            self.log.info(f"POST RESPONSE DATA: {res.data}")
-            response = res.json[0]
-            self.log.info(f"RESPONSE JSON: \n {response}")
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-        # check the payload is correct
-        self.log.info(f"COMPARING LABELS: {response['labels']} VS {self.label}")
-        self.assertEqual(response['labels'], [self.label])
-        # also check each attribute is correct
-        for x in self.attribute:
-            self.assertEqual(self.attribute[x], response.get(x, None))
-
-    def test_07_retrieve_node_not_exist(self):
-        unreal_id = 1
-        self.log.info("\n")
-        self.log.info('07'+'test retrieve_node not exists'.center(80, '-'))
-        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, unreal_id)
-        self.log.info(f"POST API: {testing_api}")
-        res = self.app.get(testing_api)
-        self.log.info(f"POST RESPONSE: {res}")
-        try:
-            self.log.info(f"COMPARING: {res.status_code} VS {200}")
-            self.assertEqual(res.status_code, 200)
-            self.log.info(f"POST RESPONSE DATA: {res.data}")
-            nl = b'\n'
-            self.log.info(f"COMPARING: {res.data} VS {b'[]'+nl}")
-            self.assertIn(res.data,b'[]\n')
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def test_08_retrieve_node_empty_string(self):
-        unreal_id = ""
-        self.log.info("\n")
-        self.log.info('08'+'test retrieve_node empty string'.center(80, '-'))
-        testing_api = "/v1/neo4j/nodes/%s/node/%s" % (self.label, unreal_id)
-        self.log.info(f"POST API: {testing_api}")
-        res = self.app.get(testing_api)
-        self.log.info(f"POST RESPONSE: {res}")
-        try:
-            self.log.info(f"COMPARING: {res.status_code} VS {404}")
-            self.assertEqual(res.status_code, 404)
-            self.log.info(f"POST RESPONSE DATA: {res.data}")
-            self.log.info(f"COMPARING: {b'Not Found'} VS {res.data}")
-            self.assertIn(b'Not Found', res.data)
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def test_09_retrieve_node_string(self):
-        unreal_id = "abc"
-        self.log.info("\n")
-        self.log.info('09'+'test retrieve_node string'.center(80, '-'))
-        testing_api = "/v1/neo4j/nodes/%s/node/%s" % (self.label, unreal_id)
-        self.log.info(f"POST API: {testing_api}")
-        res = self.app.get(testing_api)
-        self.log.info(f"POST RESPONSE: {res}")
-        try:
+            res = self.app.put(testing_api, json = self.update_attribute)
+            self.log.info(f"PUT RESPONSE: {res}")
+            self.log.info(f"RESPONSE DATA: {res.data}")
             self.log.info(f"COMPARING: {res.status_code} VS {403}")
             self.assertEqual(res.status_code, 403)
-            self.log.info(f"POST RESPONSE DATA: {res.data}")
-            self.log.info(f"COMPARING: {b'invalid literal'} VS {res.data}")
-            self.assertIn(b'invalid literal', res.data)
+            #self.log.info(f"COMPARING: {b'The requested URL was not found on the server'} "
+                          #f"IN {res.data}")
+            #self.assertTrue(b"The requested URL was not found on the server" in res.data)
         except Exception as e:
             self.log.error(e)
             raise e
+    
 
-    def test_10_retrieve_node_list(self):
-        unreal_id = [102,101,100]
+    @skipIfTrue("skip_condition")
+    def test_03_1_get_all_datasets_properties(self):
         self.log.info("\n")
-        self.log.info('10'+'test retrieve_node list'.center(80, '-'))
-        testing_api = "/v1/neo4j/nodes/%s/node/%s" % (self.label, unreal_id)
-        self.log.info(f"POST API: {testing_api}")
-        res = self.app.get(testing_api)
-        self.log.info(f"POST RESPONSE: {res}")
-        try:
-            self.log.info(f"COMPARING: {res.status_code} VS {403}")
-            self.assertEqual(res.status_code, 403)
-            self.log.info(f"POST RESPONSE DATA: {res.data}")
-            self.log.info(f"COMPARING: {b'invalid literal'} VS {res.data}")
-            self.assertIn(b'invalid literal', res.data)
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def test_11_update_node(self):
-        self.log.info("\n")
-        self.log.info('11'+'test update_node'.center(80, '-'))
-        self.log.info(f"post id {self.node_id}, label {self.label}")
-        update_payload = {"new_attribute": "new_value"}
-        self.__class__.attribute.update(update_payload)
-        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, self.node_id)
-        self.log.info(f"POST API: {testing_api}")
-        try:
-            res = self.app.put(testing_api, json=update_payload)
-            self.log.info(f"POST RESPONSE: {res}")
-            self.log.info(f"COMPARING: {res.status_code} VS {200}")
-            self.assertEqual(res.status_code, 200)
-            self.log.info(f"POST RESPONSE DATA: {res.data}")
-            response = res.json[0]
-            self.log.info(f"COMPARE UPDATED VALUE: 'new_attribute': 'new_value'")
-            self.assertEqual(response.get('new_attribute'), 'new_value')
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def test_12_update_node_with_int(self):
-        self.log.info("\n")
-        self.log.info('12'+'test update_node with integer'.center(80, '-'))
-        self.log.info(f"post id {self.node_id}, label {self.label}")
-        update_payload = {"new_attribute": 101}
-        self.__class__.attribute.update(update_payload)
-        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, self.node_id)
-        self.log.info(f"POST API: {testing_api}")
-        try:
-            res = self.app.put(testing_api, json=update_payload)
-            self.log.info(f"POST RESPONSE: {res}")
-            self.log.info(f"COMPARING: {res.status_code} VS {200}")
-            self.assertEqual(res.status_code, 200)
-            self.log.info(f"POST RESPONSE DATA: {res.data}")
-            response = res.json[0]
-            self.log.info(f"COMPARE UPDATED VALUE: 'new_attribute': '101'")
-            self.assertEqual(response.get('new_attribute'), 101)
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def test_13_update_node_with_list(self):
-        self.log.info("\n")
-        self.log.info('13'+'test update_node with list'.center(80, '-'))
-        self.log.info(f"post id {self.node_id}, label {self.label}")
-        update_payload = {"new_attribute": [123, 'abc']}
-        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, self.node_id)
-        self.log.info(f"POST API: {testing_api}")
-        try:
-            res = self.app.put(testing_api, json=update_payload)
-            self.log.info(f"POST RESPONSE: {res}")
-            self.log.info(f"COMPARING: {res.status_code} VS {403}")
-            self.assertEqual(res.status_code, 403)
-            self.log.info(f"POST RESPONSE DATA: {res.data}")
-            response = res.json
-            self.log.info(f"COMPARING: {'Cannot rollback finished transaction'} IN {response}")
-            self.assertIn("Cannot rollback finished transaction", response)
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def test_14_update_node_with_single_array(self):
-        self.log.info("\n")
-        self.log.info('14'+'test update_node with single array'.center(80, '-'))
-        self.log.info(f"post id {self.node_id}, label {self.label}")
-        update_payload = {"new_attribute": ['new_value']}
-        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, self.node_id)
-        self.log.info(f"POST API: {testing_api}")
-        try:
-            res = self.app.put(testing_api, json=update_payload)
-            self.log.info(f"POST RESPONSE: {res}")
-            self.log.info(f"COMPARING: {res.status_code} VS {200}")
-            self.assertEqual(res.status_code, 200)
-            self.log.info(f"POST RESPONSE DATA: {res.data}")
-            response = res.json[0]
-            self.log.info(f"COMPARE UPDATED VALUE: 'new_attribute': '[new_value]'")
-            self.assertEqual(response.get('new_attribute'), ['new_value'])
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def test_15_update_node_with_duplicate_value(self):
-        self.log.info("\n")
-        self.log.info('15'+'test update_node with duplicate value'.center(80, '-'))
-        self.log.info(f"post id {self.node_id}, label {self.label}")
-        update_payload = {"new_attribute": ['new_value']}
-        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, self.node_id)
-        self.log.info(f"POST API: {testing_api}")
-        try:
-            res1 = self.app.put(testing_api, json=update_payload)
-            self.log.info(f"FIRST POST RESPONSE: {res1}")
-            res2 = self.app.put(testing_api, json=update_payload)
-            self.log.info(f"SECOND POST RESPONSE: {res2}")
-            self.log.info(f"COMPARING: {res2.status_code} VS {200}")
-            self.assertEqual(res2.status_code, 200)
-            self.log.info(f"POST RESPONSE DATA: {res2.data}")
-            response = res2.json[0]
-            self.log.info(f"COMPARE UPDATED VALUE: 'new_attribute': '[new_value]'")
-            self.assertEqual(response.get('new_attribute'), ['new_value'])
-            res3 = self.app.get("/v1/neo4j/nodes/%s/node/%d" % (self.label, self.node_id))
-            self.log.info(f"CURRENT NODE: P{res3.data}")
-            retrieved_response = res3.json[0]
-            self.log.info(retrieved_response)
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def test_16_update_node_overwriting_value(self):
-        self.log.info("\n")
-        self.log.info('16'+'test update_node same attribute with different values'.center(80, '-'))
-        self.log.info(f"post id {self.node_id}, label {self.label}")
-        update_payload1 = {"new_attribute": ['1st_new_value']}
-        update_payload2 = {"new_attribute": ['2nd_new_value']}
-        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, self.node_id)
-        self.log.info(f"POST API: {testing_api}")
-        try:
-            res1 = self.app.put(testing_api, json=update_payload1)
-            self.log.info(f"FIRST POST RESPONSE: {res1}")
-            res2 = self.app.put(testing_api, json=update_payload2)
-            self.log.info(f"SECOND POST RESPONSE: {res2}")
-            self.log.info(f"COMPARING: {res2.status_code} VS {200}")
-            self.assertEqual(res2.status_code, 200)
-            self.log.info(f"POST RESPONSE DATA: {res2.data}")
-            response = res2.json[0]
-            self.log.info(f"COMPARE UPDATED VALUE: 'new_attribute': '[2nd_new_value]'")
-            self.assertEqual(response.get('new_attribute'), ['2nd_new_value'])
-            res3 = self.app.get("/v1/neo4j/nodes/%s/node/%d" % (self.label, self.node_id))
-            self.log.info(f"CURRENT NODE: P{res3.data}")
-            retrieved_response = res3.json[0]
-            self.log.info(retrieved_response)
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def test_17_post_query_on_node(self):
-        self.log.info("\n")
-        self.log.info('17'+'test query node'.center(80, '-'))
-        query_payload = {"new_attribute": "new_value"}
-        testing_api = "/v1/neo4j/nodes/%s/query"%self.label
-        self.log.info(f"POST API: {testing_api}")
-        self.log.info(f"POST PAYLOAD: {query_payload}")
-        try:
-            response = self.app.post(testing_api, json=query_payload)
-            self.log.info(f"POST RESPONSE JSON: {response.json}")
-            self.log.info(f"NUMBER OF QUERIED RESULT: {len(response.json)}")
-            self.log.info(f"COMPARING: {response.status_code} VS {200}")
-            self.assertEqual(response.status_code, 200)
-            self.log.info(f"COMPARING EACH RECORD")
-            n = 0
-            for r in response.json:
-                try:
-                    self.assertEqual(r['labels'], [self.label])
-                    self.assertEqual(r['new_attribute'], 'new_value')
-                    n += 1
-                except AssertionError:
-                    self.log.error(f"ERROR IN RECORD: {r}")
-            self.log.info(f"{n} RECORDS MATCHED WITH TEST LABEL")
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def test_18_post_query_on_node_multi_condition(self):
-        self.log.info("\n")
-        self.log.info('18'+'test query on multiple conditions'.center(80, '-'))
-        query_payload = {"new_attribute": "new_value", "test_original_key": "test_original_value"}
-        testing_api = "/v1/neo4j/nodes/%s/query"% self.label
-        self.log.info(f"POST API: {testing_api}")
-        self.log.info(f"POST PAYLOAD: {query_payload}")
-        try:
-            response = self.app.post(testing_api, json=query_payload)
-            self.log.info(f"POST RESPONSE JSON: {response.json}")
-            self.log.info(f"NUMBER OF QUERIED RESULT: {len(response.json)}")
-            self.log.info(f"COMPARING: {response.status_code} VS {200}")
-            self.assertEqual(response.status_code, 200)
-            self.log.info(f"COMPARING EACH RECORD LABEL")
-            n = 0
-            for r in response.json:
-                try:
-                    self.assertEqual(r['labels'], [self.label])
-                    self.assertEqual(r['new_attribute'], 'new_value')
-                    self.assertEqual(r['test_original_key'], 'test_original_value')
-                    n += 1
-                except AssertionError as ae:
-                    self.log.error(f"ERROR IN RECORD: {r}")
-                    raise ae
-            self.log.info(f"{n} RECORDS MATCHED WITH TEST LABEL")
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def test_19_post_query_on_node_non_exist_condition(self):
-        self.log.info("\n")
-        self.log.info('19'+'test query on non-exist conditions'.center(80, '-'))
-        query_payload = {"unreal_attribute": "fake_value"}
-        testing_api = "/v1/neo4j/nodes/%s/query"% self.label
-        self.log.info(f"POST API: {testing_api}")
-        self.log.info(f"POST PAYLOAD: {query_payload}")
-        try:
-            response = self.app.post(testing_api, json=query_payload)
-            self.log.info(f"POST RESPONSE JSON: {response.json}")
-            self.log.info(f"NUMBER OF QUERIED RESULT: {len(response.json)}")
-            self.log.info(f"COMPARING: {response.status_code} VS {200}")
-            self.assertEqual(response.status_code, 200)
-            self.log.info(f"COMPARING EACH RECORD LABEL")
-            n = 0
-            for r in response.json:
-                try:
-                    self.assertEqual(r['labels'], [self.label])
-                    self.assertEqual(r['unreal_attribute'], 'fake_value')
-                    n += 1
-                except AssertionError as ae:
-                    self.log.error(f"ERROR IN RECORD: {r}")
-                    raise ae
-            self.log.info(f"{n} RECORDS MATCHED WITH TEST LABEL")
-            self.log.info(f"COMPARING MATCHES: {n} VS {0}")
-            self.assertEqual(n, 0)
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def test_20_post_query_on_node_without_condition(self):
-        self.log.info("\n")
-        self.log.info('20'+'test query without condition'.center(80, '-'))
-        query_payload = {}
-        testing_api = "/v1/neo4j/nodes/%s/query"% self.label
-        self.log.info(f"POST API: {testing_api}")
-        self.log.info(f"POST PAYLOAD: {query_payload}")
-        try:
-            response = self.app.post(testing_api, json=query_payload)
-            self.log.info(f"POST RESPONSE JSON: {response.json}")
-            self.log.info(f"COMPARING: {response.status_code} VS {403}")
-            self.assertEqual(response.status_code, 200)
-            self.log.info(f"POST RESPONSE JSON: {response.json}")
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    #def test_21_post_query_on_node_id(self):
-    #    """
-    #    IMPORTANT:
-    #    ID is not a node attribute,
-    #    however, enable query on ID may result
-    #    unexpected deletion by calling this API.
-    #    Hence, this test ensure query on node API
-    #    does not support query on node ID.
-    #    """
-    #    self.log.info("\n")
-    #    self.log.info('21'+'test attempt to query node ID'.center(80, '-'))
-    #    query_payload = {'ID(node)': self.node_id}
-    #    testing_api = "/v1/neo4j/nodes/%s/query"% self.label
-    #    self.log.info(f"POST API: {testing_api}")
-    #    self.log.info(f"POST PAYLOAD: {query_payload}")
-    #    try:
-    #        response = self.app.post(testing_api, json=query_payload)
-    #        self.log.info(f"POST RESPONSE JSON: {response.json}")
-    #        self.log.info(f"COMPARING: {response.status_code} VS {403}")
-    #        self.assertEqual(response.status_code, 403)
-    #        self.log.info(f"COMPARING: {b'Unknown function'} IN {response.data}")
-    #        self.assertIn(b"Unknown function", response.data)
-    #    except Exception as e:
-    #        self.log.error(e)
-    #        raise e
-
-    def test_22_post_query_multiple_queries(self):
-        """
-        Attempt to run another query after original query,
-        in case of sql injection, for example
-        match (node:test_label) where node.new_attribute = "new_value" match (b:
-        test_label) where id(b)=102 DELETE b return node
-        """
-        self.log.info("\n")
-        test_delete_id = 104
-        self.log.info('22'+'test attempt to run multiple queries'.center(80, '-'))
-        value = 'new_value match (b: test_label) where id(b)= %d DETACH DELETE b' % test_delete_id
-        query_payload = {"new_attribute": value}
-        testing_api = "/v1/neo4j/nodes/%s/query"% self.label
-        self.log.info(f"POST API: {testing_api}")
-        self.log.info(f"POST PAYLOAD: {query_payload}")
-        res_origin = self.app.get("/v1/neo4j/nodes/%s/node/%d" % (self.label, test_delete_id))
-        self.log.info(f"CURRENT NODE: {res_origin.data}")
-        try:
-            response = self.app.post(testing_api, json=query_payload)
-            self.log.info(f"COMPARING: {response.status_code} VS {200}")
-            self.assertEqual(response.status_code, 200)
-            self.log.info(f"POST RESPONSE JSON: {response.json}")
-            self.assertEqual(response.json, [])
-            res_delete = self.app.get("/v1/neo4j/nodes/%s/node/%d" % (self.label, test_delete_id))
-            self.log.info(f"CURRENT NODE after deletion: {res_delete.data}")
-            self.log.info(f"COMPARE TESTING NODE IS THE SAME AS BEFORE DELETION: "
-                          f"{res_origin.data==res_delete.data}")
-            self.assertTrue(res_origin, res_delete)
-        except Exception as e:
-            self.log.error(e)
-            raise e
-
-    def get_property(self, label, expected_code):
-        # this is not a testing case
-        testing_api = "/v1/neo4j/nodes/%s/properties" % label
+        self.log.info('03'+ f'test get all {self.label} properties'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/%s/properties" % self.label
         self.log.info(f"GET API: {testing_api}")
-        response = self.app.get(testing_api)
-        self.assertEqual(response.status_code, expected_code)
-        node_property = []
-        res = response.json
-        self.log.info(f"GET STATUS: {expected_code}")
-        self.log.info(f"GET RESPONSE DATA: {response.data}")
-        self.log.info(f"GET RESPONSE JSON: {res}")
-        if res is not None:
-            for properties in res:
-                node_property.append(properties)
-        self.log.info(f"FOUND PROPERTY: {node_property}")
-        return node_property
-
-    #def test_23_get_properties(self):
-    #    self.log.info("\n")
-    #    self.log.info('23'+'test get property for User and Dataset'.center(80, '-'))
-    #    expected_code = 200
-    #    expected_user_property = ['email', 'first_name', 'last_name', 'name', 'path', 'role', 'last_login', 'status']
-    #    expected_project_property = ['admin', 'code', 'discoverable', 'id', 'name', 'path',
-    #                                 'roles', 'type', 'description', 'tags', 'labels',
-    #                                 'is_new']
-    #    try:
-    #        self.log.info(f"COMPARING USER PROPERTIES")
-    #        user_property = self.get_property('User', expected_code)
-    #        self.assertEqual(set(user_property), set(expected_user_property))
-
-    #        self.log.info(f"COMPARING PROJECT PROPERTIES")
-    #        project_property = self.get_property('Dataset', expected_code)
-    #        self.assertEqual(set(project_property), set(expected_project_property))
-    #    except Exception as e:
-    #        self.log.error(e)
-    #        raise e
-
-
-    @unittest.skip("Broken after neo4j data was cleaned")
-    def test_24_get_properties_test_label(self):
-        self.log.info("\n")
-        self.log.info('24'+'test get property test_label'.center(80, '-'))
-        expected_code = 200
-        expected_test_property = ['name', 'test_original_key', 'new_attribute',
-                                  'parent_relation', 'parent_id', 'id']
         try:
-            self.log.info(f"COMPARING TEST PROPERTIES")
-            test_property = self.get_property('test_label', expected_code)
-            self.assertEqual(set(test_property), set(expected_test_property))
+            res = self.app.get(testing_api)
+            self.log.info(f"GET RESPONSE: {res}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            self.assertEqual(res.status_code, 200)
+            response = res.json 
+            #self.log.info(f"GET RESPONSE JSON: {response}")
+            code_total = len(response[self.property_key[0]])
+            id_total = len(response[self.property_key[1]])
+            self.log.info(f"COMPARING NUMBER: {self.property_key[0]} {code_total} VS {self.property_key[1]} {id_total}")
+            #self.assertEqual(code_total, id_total)
+            if "labels" in response:
+                self.log.info(f"COMPARING: {response['labels']} VS {self.label}")
+                self.assertEqual(response['labels'], [[self.label]])
         except Exception as e:
             self.log.error(e)
             raise e
 
-    def test_25_get_properties_non_exist_label(self):
+    @skipIfTrue("skip_condition")
+    def test_03_2_get_property_with_additional_dataset(self):
         self.log.info("\n")
-        self.log.info('25'+'test get property non-exists'.center(80, '-'))
-        expected_code = 200
-        expected_test_property = []
+        self.log.info('03.1'+ f'test total {self.label} after create a new one'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/%s/properties" % self.label
+        self.log.info(f"GET API: {testing_api}")
+        create_api = "/v1/neo4j/nodes/%s" % self.label
         try:
-            self.log.info(f"COMPARING PROPERTIES")
-            test_property = self.get_property('unreal_label', expected_code)
-            self.assertEqual(set(test_property), set(expected_test_property))
+            get_total = self.app.get(testing_api).json
+            code_total = len(get_total[self.property_key[0]])
+            id_total = len(get_total[self.property_key[1]])
+            create = self.app.post(create_api, json = self.attribute)
+            res = self.app.get(testing_api)
+            self.log.info(f"GET RESPONSE: {res}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            response = res.json
+            code_current = len(response[self.property_key[0]])
+            id_current = len(response[self.property_key[1]])
+            self.log.info(f"COMPARING: CURRENT {self.label} {self.property_key[0]} {code_current} VS ORIGINAL {code_total}")
+            self.assertEqual(code_current, code_total+1)
+            self.log.info(f"COMPARING: CURRENT {self.label} {self.property_key[1]} {id_current} VS ORIGINAL {id_total}")
+            self.assertEqual(id_current, id_total+1)
+            self.log.info(f"COMPARING NUMBER: {self.property_key[0]} VS {self.property_key[1]}")
+            #self.assertEqual(code_current, id_current)
+            self.test.delete_node(create.json[0].get('id', None), self.label)
+        except Exception as e:
+            if create.status_code == 200:
+                self.test.delete_node(create.json[0].get('id', None), self.label)
+            self.log.error(e)
+            raise e
+
+
+    #@skipIfTrue("skip_condition")
+    def test_03_3_get_all_datasets_properties_with_int_label(self): 
+        self.log.info("\n")
+        self.log.info('03.2'+f'test get all {self.label} properties'.center(80, '-'))
+        int_label = 14159265
+        testing_api = "/v1/neo4j/nodes/%s/properties" % int_label
+        self.log.info(f"GET API: {testing_api}")
+        try:
+            res = self.app.get(testing_api)
+            self.log.info(f"GET RESPONSE: {res}")
+            self.log.info(f"COMPARING: {res.status_code} VS {403}")
+            self.assertEqual(res.status_code, 403)
         except Exception as e:
             self.log.error(e)
             raise e
 
-    def test_26_get_properties_from_none(self):
+
+    #@unittest.skip
+    def test_04_0_query_dataset(self):
         self.log.info("\n")
-        self.log.info('26'+'test get property from None'.center(80, '-'))
-        expected_test_property = []
-        expected_code = 200
+        self.log.info('04'+ f'test query {self.label} with given information'.center(80, '-'))
+        testing_api = "/v2/neo4j/nodes/query"
+        self.log.info(f"GET API: {testing_api}")
+        query_key = []
+        for i in self.query["query"]:
+            if i != "labels":
+                query_key.append(i)
         try:
-            self.log.info(f"COMPARING PROPERTIES")
-            test_property = self.get_property(None, expected_code)
-            self.assertEqual(set(test_property), set(expected_test_property))
+            res = self.app.post(testing_api, json = self.query)
+            self.log.info(f"GET RESPONSE: {res}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            self.assertEqual(res.status_code, 200)
+            response = res.json
+            self.log.info(f"GET RESPONSE JSON: {response}")
+            result = response['result']
+            expect_dataset_id = [self.delete_dataset_id, self.dataset_id]
+            self.log.info(f"COMPARE {self.label} IN THE QUERY")
+            self.log.info(f"COMAPRING QUERY KEY ARE {query_key}")
+            for item in result:
+                if item['id'] in expect_dataset_id:
+                    for k in query_key:
+                        self.log.info(f"COMPARE {item['id']} {self.label}_{k}: {item[k]} VS {self.payload[k]}")
+                        self.assertEqual(item[k], self.payload[k])
+                    expect_dataset_id.remove(item['id'])
+            self.log.info(f"The left {self.label} that does not found: {expect_dataset_id}")
+            self.assertEqual(expect_dataset_id, [])
         except Exception as e:
             self.log.error(e)
             raise e
 
-    def test_27_get_properties_from_empty_string(self):
+    
+    #@unittest.skip
+    def test_05_0_delete_dataset(self):
         self.log.info("\n")
-        self.log.info('27'+'test get property from empty string'.center(80, '-'))
-        expected_test_property = []
-        expected_code = 308
+        self.log.info('05'+ f'test delete {self.label}'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, self.delete_dataset_id)
+        self.log.info(f"DELETE API: {testing_api}")
         try:
-            self.log.info(f"COMPARING PROPERTIES")
-            test_property = self.get_property("", expected_code)
-            self.assertEqual(set(test_property), set(expected_test_property))
+            res = self.app.delete(testing_api)
+            self.log.info(f"DELETE RESPONSE: {res}")
+            self.log.info(f"RESPONSE DATA: {res.data}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            self.assertEqual(res.status_code, 200)
+            #if res.status_code == 200:
+                #self.is_delete = True
+            #find node again to check whether node is actually deleted
+            #get_node = self.app.get(testing_api)
         except Exception as e:
             self.log.error(e)
             raise e
+
+    #@unittest.skip
+    def test_05_1_delete_dataset_again(self):
+        self.log.info("\n")
+        self.log.info('05.1'+ f'test delete {self.label} that has already been deleted'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, self.delete_dataset_id)
+        self.log.info(f"DELETE API: {testing_api}")
+        try:
+            res = self.app.delete(testing_api)
+            self.log.info(f"DELETE RESPONSE: {res}")
+            self.log.info(f"RESPONSE DATA: {res.data}")
+            self.log.info(f"COMPARING: {res.status_code} VS {403}")
+            self.assertEqual(res.status_code, 403)
+        except Exception as e:
+            self.log.error(e)
+            raise e
+    
+    #@unittest.skip
+    def test_06_0_get_dataset(self):
+        self.log.info("\n")
+        self.log.info('06'+ f'test get {self.label} with exist id'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, self.dataset_id)
+        self.log.info(f"GET API: {testing_api}")
+        try:
+            res = self.app.get(testing_api)
+            self.log.info(f"GET RESPONSE: {res}")
+            self.log.info(f"RESPONSE DATA: {res.data}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            self.assertEqual(res.status_code, 200)
+            response = res.json[0]
+            self.log.info(f"COMPARING LABELS: {response['labels']} VS {self.label}")
+            self.assertIn(self.label, response['labels'])
+            for x in self.payload:
+                if x in response:
+                    self.assertEqual(self.payload[x], response.get(x, None))
+        except Exception as e:
+            self.log.error(e)
+            raise e
+    
+    #@unittest.skip
+    def test_06_1_get_deleted_dataset(self):
+        self.log.info("\n")
+        self.log.info('06.1'+ f'test get {self.label} with deleted node'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, self.delete_dataset_id)
+        self.log.info(f"GET API: {testing_api}")
+        try:
+            res = self.app.get(testing_api)
+            self.log.info(f"GET RESPONSE: {res}")
+            self.log.info(f"RESPONSE DATA: {res.data}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            self.assertEqual(res.status_code, 200)
+            self.log.info(f"COMPARING CONTENT: '[]' VS {res.data}")
+            self.assertIn(b'[]', res.data)
+        except Exception as e:
+            self.log.error(e)
+            raise e
+
+    #@unittest.skip
+    def test_06_2_get_dataset_with_wrong_id(self):
+        self.log.info("\n")
+        self.log.info('06.2'+ f'test get {self.label} with not exist id'.center(80, '-'))
+        not_exist_id = 1415926
+        testing_api = "/v1/neo4j/nodes/%s/node/%d" % (self.label, not_exist_id)
+        self.log.info(f"GET API: {testing_api}")
+        try:
+            res = self.app.get(testing_api)
+            self.log.info(f"GET RESPONSE: {res}")
+            self.log.info(f"RESPONSE DATA: {res.data}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            self.assertEqual(res.status_code, 200)
+            self.log.info(f"COMPARING CONTENT: '[]' VS {res.data}")
+            self.assertIn(b'[]', res.data)
+        except Exception as e:
+            self.log.error(e)
+            raise e
+ 
+
+#@unittest.skip('not used for now')
+class TestNeo4jUsers(TestNeo4jDataset):
+    # some node properties
+    label = "User"
+    #dataset for put, get 
+    dataset_id = None
+    #update label
+    update_dataset_id = None
+    #delete
+    delete_dataset_id = None
+    #id created by create test function
+    # some of the attribute return from neo4j
+    payload = {
+            "name": "unittestuser1",
+            "path": "users",
+            "email": "amy.guindoc12+10@gmail.com",
+            "first_name": "test",
+            "last_name": "user",
+            "role": "admin",
+            "status": "active"
+        }
+
+    attribute = {
+            "name": "unittestuser2",
+            "path": "users",
+            "email": "amy.guindoc12+20@gmail.com",
+            "first_name": "test",
+            "last_name": "user",
+            "role": "admin",
+            "status": "active"
+        }
+    updated_payload = {
+            "name": "unittestuser11",
+            "email": "amy.guindoc12+11@gmail.com"
+    }
+
+    updated_payload2 = {
+            "name": "unittestuser12",
+            "email": "amy.guindoc12+12@gmail.com"
+    }
+
+    update_attribute = {
+            "role": "member",
+            "status": "disabled"
+        }
+
+    query = {
+            "page": 0,
+            "page_size": 25,
+            "partial": True,
+            "order_by": "name",
+            "order_type": "desc",
+            "query": {
+                "first_name": "test",
+                "last_name": "user",
+                "labels": [
+                    label
+                    ]
+                }
+            }
+
+    property_key = ['name', 'email']
+    #is_delete = False
+    log = Logger(name='test_neo4j_user.log')
+
+    test = SetUpTest(log)
+
+    @classmethod
+    def setup_class(cls):
+        cls.log = cls.test.log
+        cls.app = cls.test.app
+        #self.node_id = self.test.create_node(self.label, self.attribute)
+        cls.log.info("Preparing test".ljust(80, '-'))
+        try:
+            # create node for dataset_id
+            cls.dataset_id = cls.test.create_node(cls.label, cls.payload)
+            # create node for update_dataset_id
+            copy_payload = copy.deepcopy(cls.payload)
+            copy_payload.update(cls.updated_payload)
+            cls.update_dataset_id = cls.test.create_node(cls.label, copy_payload)
+            # create node for delete_dataset_id
+            copy_payload = copy.deepcopy(cls.payload)
+            copy_payload.update(cls.updated_payload2)
+            cls.delete_dataset_id = cls.test.create_node(cls.label, copy_payload)
+        except Exception as e:
+            cls.log.error(f"Error happened during setup: {e}")
+            raise unittest.SkipTest(f"Failed setup test {e}")
+    
+    @classmethod
+    def teardown_class(cls):
+        cls.log.info("\n")
+        cls.log.info("START TEAR DOWN PROCESS".ljust(80, '-'))
+        cls.test.delete_node(cls.dataset_id, cls.label)
+        cls.test.delete_node(cls.update_dataset_id, cls.label)
+        #cls.test.delete_node(cls.delete_dataset_id, cls.label)
+
+    @skipIfTrue("skip_condition")
+    def test_07_1_count_total_user_number(self):
+        self.log.info("\n")
+        self.log.info('07'+ f'test count number of platform {self.label}'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/%s/query/count" % self.label
+        self.log.info(f"GET API: {testing_api}")
+        query_property = "/v1/neo4j/nodes/%s/properties" % self.label
+        #specific for user node
+        query_load = {
+            "count": True
+        }
+        try:
+            res = self.app.post(testing_api, json = query_load)
+            self.log.info(f"GET RESPONSE: {res}")
+            self.log.info(f"RESPONSE DATA: {res.data}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            self.assertEqual(res.status_code, 200)
+            total = res.json['count']
+            query_property = self.app.get(query_property)
+            query_result = query_property.json
+            expect = len(query_result[self.property_key[0]])
+            self.log.info(f"COMPARING: EXPECT TOTAL {expect} VS ACTUAL COUNT {total}")
+            self.assertEqual(total, expect)
+        except Exception as e:
+            self.log.error(e)
+            raise e
+
+    def test_07_2_count_total_user_number_after_adding(self):
+        self.log.info("\n")
+        self.log.info('07.1'+ f'test count number of platform {self.label} after addition'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/%s/query/count" % self.label
+        self.log.info(f"GET API: {testing_api}")
+        #specific for user node
+        query_load = {
+            "count": True
+        }
+        create_id = None
+        try:
+            res = self.app.post(testing_api, json = query_load)
+            self.log.info(f"GET RESPONSE: {res}")
+            self.log.info(f"RESPONSE DATA: {res.data}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            original_total = res.json['count']
+            create_id = self.test.create_node(self.label, self.attribute)
+            current = self.app.post(testing_api, json = query_load)
+            current_total = current.json['count']
+            self.log.info(f"COMPARING: original total {original_total} VS current total {current_total}")
+            self.assertEqual(current_total, original_total+1)
+            self.test.delete_node(create_id, self.label)
+        except Exception as e:
+            if create_id != None:
+                self.test.delete_node(create_id, self.label)
+            self.log.error(e)
+            raise e
+
+    @skipIfTrue("skip_condition")
+    def test_07_3_count_single_name(self):
+        self.log.info("\n")
+        self.log.info('07.2'+ f'test number of platform {self.label} name'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/%s/query/count" % self.label
+        self.log.info(f"GET API: {testing_api}")
+        query_load = {
+            "count": True,
+            "name": self.payload["name"]
+        }
+        try:
+            res = self.app.post(testing_api, json = query_load)
+            self.log.info(f"GET RESPONSE: {res}")
+            self.log.info(f"RESPONSE DATA: {res.data}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            total = res.json['count']
+            #"name" should be unique
+            self.log.info(f"RESULT: total number {total} should be 1")
+            self.assertEqual(total, 1)
+        except Exception as e:
+            self.log.error(e)
+            raise e
+    
+    @skipIfTrue("skip_condition")
+    def test_07_4_count_single_email(self):
+        self.log.info("\n")
+        self.log.info('07.3'+ f'test number of platform {self.label} email'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/%s/query/count" % self.label
+        self.log.info(f"GET API: {testing_api}")
+        query_load = {
+            "count": True,
+            "email": self.payload["email"]
+        }
+        try:
+            res = self.app.post(testing_api, json = query_load)
+            self.log.info(f"GET RESPONSE: {res}")
+            self.log.info(f"RESPONSE DATA: {res.data}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            total = res.json['count']
+            #"name" should be unique
+            self.log.info(f"RESULT: total number {total} should be 1")
+            self.assertEqual(total, 1)
+        except Exception as e:
+            self.log.error(e)
+            raise e
+
+    @skipIfTrue("skip_condition")
+    def test_08_1_query_user(self):
+        self.log.info("\n")
+        self.log.info('08'+ f'test the listing of {self.label}'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/%s/query" % self.label
+        self.log.info(f"GET API: {testing_api}") 
+        query_load = {
+            "name": self.payload["name"]
+        }
+        try:
+            res = self.app.post(testing_api, json = query_load)
+            self.log.info(f"GET RESPONSE: {res}")
+            self.log.info(f"RESPONSE DATA: {res.data}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            response = res.json[0]
+            self.log.info(f"COMPARING: user_id {response.get('id', None)} VS actual_id {self.dataset_id}")
+            self.assertEqual(response.get('id', None), self.dataset_id)
+            for x in self.payload:
+                self.log.info(f"COMPARING ATTRIBUTE of {x}: {self.attribute[x]} VS {response.get(x, None)}")
+                self.assertEqual(self.payload[x], response.get(x, None))
+        except Exception as e:
+            self.log.error(e)
+            raise e    
+
+#@unittest.skip('not used for now')
+class TestNeo4jFiles(TestNeo4jUsers):
+    # some node properties
+    label = "File"
+    #dataset for put, get 
+    dataset_id = None
+    #update label
+    update_dataset_id = None
+    #delete
+    delete_dataset_id = None
+    #create dataset for files
+    create_dataset = None
+    dataset_payload = {
+            "name": "Unittest_dataset",
+            "path": "utest",
+            "code": "utest",
+            "description": "unit test dataset, will be deleted soon",
+            "discoverable": True,
+            "type": "Dataset",
+            "tags": [
+                "tag1"
+            ]
+        }
+    # some of the attribute return from neo4j
+    payload = {
+            "name": "Unittest_file10.txt",
+            "extra_labels": ["Greenroom", "Raw"],
+            "file_size": 7120,
+            "operator": "amy11",
+            "archived": False,
+            "process_pipeline": "",
+            "uploader": "amy11",
+            "generate_id": "undefined"
+            #"path": "/data/vre-storage/indoctestproject/processed/straight_copy",
+            #"full_path": "/data/vre-storage/indoctestproject/processed/straight_copy/10.3.7.220_workbench_indoctestproject_guacamole_.png",        
+        }
+
+    updated_payload = {
+            "name": "Unittest_file11.txt"
+    }
+
+    updated_payload2 = {
+            "name": "Unittest_file12.txt"
+    }
+
+    attribute = {
+            "name": "Unittest_file20.txt",
+            "extra_labels": ["Greenroom", "Raw"],
+            "file_size": 7120,
+            "operator": "amy11",
+            "archived": False,
+            "process_pipeline": "",
+            "uploader": "amy11",
+            "generate_id": "undefined"
+    }
+
+    update_attribute = {
+            "uploader": "amy12",
+            "file_size": 7000,
+            "archived": True,
+        }
+
+    # required key to update payload
+    payload_key = ["name", "path", "full_path"]
+    # identity key in response body
+    property_key = ["full_path", "code"]
+    query = {
+            "page": 0,
+            "page_size": 25,
+            "partial": True,
+            "order_by": "id",
+            "order_type": "desc",
+            "query": {
+                "archived": False,
+                "operator": "amy11",
+                "file_size": 7120,
+                "labels": [
+                "Greenroom", 
+                "Raw", 
+                "File"
+                    ]
+                }
+            }
+
+    #is_delete = False
+    log = Logger(name='test_neo4j_file.log')
+
+    test = SetUpTest(log)
+
+    @classmethod
+    def setup_class(cls):
+        cls.log = cls.test.log
+        cls.app = cls.test.app
+        #self.node_id = self.test.create_node(self.label, self.attribute)
+        cls.log.info("Preparing test".ljust(80, '-'))
+        path = "/data/vre-storage/"
+        try:
+            # create node for dataset_id
+            cls.create_dataset = cls.test.create_node("Dataset", cls.dataset_payload)
+            # create file in the test dataset
+            cls.payload["path"] = path  + cls.dataset_payload['path'] + "/raw"
+            cls.payload["full_path"] = cls.payload["path"] + "/" + cls.payload["name"]
+            cls.dataset_id = cls.test.create_node(cls.label, cls.payload)
+            # create node for update_dataset_id
+            copy_payload = copy.deepcopy(cls.payload)
+            copy_payload.update(cls.updated_payload)
+            copy_payload["full_path"] = copy_payload["path"] + "/" + copy_payload["name"]
+            cls.update_dataset_id = cls.test.create_node(cls.label, copy_payload)
+            # create node for delete_dataset_id
+            copy_payload = copy.deepcopy(cls.payload)
+            copy_payload.update(cls.updated_payload2)
+            copy_payload["full_path"] = copy_payload["path"] + "/" + copy_payload["name"]
+            cls.delete_dataset_id = cls.test.create_node(cls.label, copy_payload)
+        except Exception as e:
+            cls.test.delete_node(cls.create_dataset, "Dataset")
+            cls.log.error(f"Error happened during setup: {e}")
+            raise unittest.SkipTest(f"Failed setup test {e}")
+
+    @classmethod
+    def teardown_class(cls):
+        cls.log.info("\n")
+        cls.log.info("START TEAR DOWN PROCESS".ljust(80, '-'))
+        cls.test.delete_node(cls.create_dataset, "Dataset")
+        cls.test.delete_node(cls.dataset_id, cls.label)
+        cls.test.delete_node(cls.update_dataset_id, cls.label)
+        #cls.test.delete_node(cls.delete_dataset_id, cls.label)
+
+    def test_01_0_create_dataset(self):
+        self.log.info("\n")
+        self.log.info('01'+f'test create {self.label}'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/%s" % self.label
+        self.log.info(f"POST API: {testing_api}")
+        path = "/data/vre-storage/"
+        try:
+            self.attribute["path"] = path + self.dataset_payload['path'] + "/raw"
+            self.attribute["full_path"] = self.attribute["path"] + "/" + self.attribute["name"]
+            res = self.app.post("/v1/neo4j/nodes/%s" % self.label, json = self.attribute)
+            response = res.json[0]
+            create_id = response.get('id', None)
+            self.log.info(f"POST RESPONSE: {res}")
+            self.log.info(f"COMPARING: {res.status_code} VS {200}")
+            self.assertEqual(res.status_code, 200)
+            self.log.info(f"RESPONSE JSON: \n {response}")
+            # check the payload is correct
+            self.log.info(f"COMPARING LABELS: {response['labels']} VS {self.label}")
+            self.assertIn(self.label, response['labels'])
+            # also check each attribute is correct
+            for x in self.attribute:
+                if x != "extra_labels":
+                    self.log.info(f"COMPARING ATTRIBUTE of {x}: {self.attribute[x]} VS {response.get(x, None)}")
+                    self.assertEqual(self.attribute[x], response.get(x, None))
+            self.test.delete_node(create_id, self.label)
+        except Exception as e:
+            self.test.delete_node(create_id, self.label)
+            self.log.error(e)
+            raise e
+

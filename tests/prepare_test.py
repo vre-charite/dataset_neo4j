@@ -1,4 +1,6 @@
 from neo4j_api.neo4j_base import Neo4jNode
+from config import ConfigClass
+import requests
 
 
 from app import create_app
@@ -15,6 +17,73 @@ class SetUpTest:
         app.config['DEBUG'] = True
         test_client = app.test_client(self)
         return test_client
+
+    def create_project(self, code, discoverable='true'):
+        self.log.info("\n")
+        self.log.info("Preparing testing project".ljust(80, '-'))
+        testing_api = "/v1/neo4j/nodes/Dataset"
+        params = {"name": "Neo4jUnitTest",
+                  "path": code,
+                  "code": code,
+                  "description": "Project created by unit test, will be deleted soon...",
+                  "discoverable": discoverable,
+                  "type": "Usecase",
+                  "tags": ['test']
+                  }
+        self.log.info(f"POST API: {testing_api}")
+        self.log.info(f"POST params: {params}")
+        try:
+            res = self.app.post(testing_api, json=params)
+            self.log.info(f"RESPONSE DATA: {res.get_json()}")
+            self.log.info(f"RESPONSE STATUS: {res.status_code}")
+            assert res.status_code == 200
+            node_id = res.get_json()[0]['id']
+            return node_id
+        except Exception as e:
+            self.log.info(f"ERROR CREATING PROJECT: {e}")
+            raise e
+
+    def create_file(self, file_event):
+        self.log.info("\n")
+        self.log.info("Creating testing file".ljust(80, '-'))
+        filename = file_event.get('filename')
+        file_type = file_event.get('file_type')
+        namespace = file_event.get('namespace')
+        project_code = file_event.get('project_code')
+        if namespace == 'vrecore':
+            path = f"/vre-data/{project_code}/{file_type}"
+        else:
+            path = f"/data/vre-storage/{project_code}/{file_type}"
+        payload = {
+                      "uploader": "EntityInfoUnittest",
+                      "file_name": filename,
+                      "path": path,
+                      "file_size": 10,
+                      "description": "string",
+                      "namespace": namespace,
+                      "data_type": file_type,
+                      "labels": ['unittest'],
+                      "project_code": project_code,
+                      "generate_id": "",
+                      "process_pipeline": "",
+                      "operator": "EntityInfoUnittest",
+                      "parent_query": {}
+                    }
+        if file_event.get("parent_geid"):
+            payload["parent_folder_geid"] = file_event.get("parent_geid")
+        testing_api = ConfigClass.DATAOPS + '/v1/filedata/'
+        try:
+            self.log.info(f'POST API: {testing_api}')
+            self.log.info(f'POST API: {payload}')
+            res = requests.post(testing_api, json=payload)
+            self.log.info(f"RESPONSE DATA: {res.text}")
+            self.log.info(f"RESPONSE STATUS: {res.status_code}")
+            assert res.status_code == 200
+            result = res.json().get('result')
+            return result
+        except Exception as e:
+            self.log.info(f"ERROR CREATING FILE: {e}")
+            raise e
 
     def create_node(self, label, attribute):
         res = self.app.post("/v1/neo4j/nodes/%s" % label, json=attribute)

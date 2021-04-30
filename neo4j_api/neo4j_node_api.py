@@ -2,13 +2,14 @@ from flask import request, make_response, jsonify
 # from flask_restful import Resource
 from flask_restx import Api, Resource
 
-from neo4j_api.neo4j_base import Neo4jNode, Neo4jClient
+from neo4j_api.neo4j_base import Neo4jNode, Neo4jClient, neo_quick_query
 from utils import neo4j_obj_2_json, node_2_json
 from . import node_ns
 from neo4j_api.swagger_modules import (
     node_update_module, node_create_module,
     node_query_module, node_query_module_count, labels_module, node_query_module_v2)
 import math
+import json
 
 
 class ActionOnNodeById(Resource):
@@ -547,3 +548,50 @@ class NodeQueryAPI(Resource):
             'num_of_pages': math.ceil(total / page_size),
         }
         return response, 200
+
+class NodeQuickCountAPI(Resource):
+    node_method = Neo4jNode()
+    get_return = """
+    {
+        "result": [
+        ]
+    }
+    """
+    @node_ns.doc(params={
+        'labels': 'Greenroom:File',
+        'other_args': '[str] or [bool] or [int]'})
+    @node_ns.response(200, get_return)
+    def get(self):
+        """
+        query count in neo4j with match query syntax
+        """
+        try:
+            labels = request.args.get('labels', None)
+            if not labels:
+                    return "labels is required", 404
+            # get query params
+            query_params_kwargs = {}
+            for arg_key in request.args:
+                if not arg_key=='labels':
+                    query_params_kwargs[arg_key] = request.args[arg_key]
+            where_condition = ""
+            if query_params_kwargs:
+                def convert_value(val):
+                    if val.startswith('[bool]'):
+                        return val.replace('[bool]', '').lower()
+                    if val.startswith('[int]'):
+                        return val.replace('[int]', '')
+                    return '"{}"'.format(val)
+                where_condition = " and ".join(['n.{}={}'.format(key, convert_value(query_params_kwargs[key])) \
+                    for key in query_params_kwargs])
+            query = 'MATCH (n:{}) '.format(labels)
+            if where_condition:
+                query+=" where {}".format(where_condition)
+            query+=" RETURN count(n) as count"
+            res = neo_quick_query(query)
+            for record in res:
+                result = record.items()[0][1]
+            return {"result": result}, 200
+        except Exception as e:
+            print(e)
+            return str(e), 403

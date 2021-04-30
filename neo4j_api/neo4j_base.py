@@ -11,7 +11,7 @@ from config import ConfigClass
 from utils import neo4j_obj_2_json, path_2_json, node_2_json
 from services.logger_services.logger_factory_service import SrvLoggerFactory
 from py2neo import Graph, Node, Relationship
-from py2neo.matching import RelationshipMatcher, NodeMatcher, CONTAINS, LIKE, OR
+from py2neo.matching import RelationshipMatcher, NodeMatcher, CONTAINS, LIKE, OR, IN
 import neotime
 import ast
 import re
@@ -127,6 +127,8 @@ class Neo4jClient(object):
                     query_params[key] = LIKE(f"(?i)(?s)(?m){value}")
             elif key == "full_path" and not partial:
                 query_params[key] = value
+            elif key == "status" and isinstance(value, list):
+                query_params[key] = IN(value) 
             elif isinstance(value, str):
                 # LIKE uses a regex, so we use regex escape for special characters
                 value = re.escape(value)
@@ -191,7 +193,7 @@ class Neo4jClient(object):
         else:
             return self.relationships.match((start_node, end_node)).all()
 
-    def add_relation_between_nodes(self, relation_label, start_id, end_id):
+    def add_relation_between_nodes(self, relation_label, start_id, end_id, properties={}):
         if type(start_id) == list and type(end_id) == list:
             raise Exception('Both start_id and end_id can be the list')
         if start_id == end_id:
@@ -201,8 +203,9 @@ class Neo4jClient(object):
         relationship = self.relationships.match((start_node, end_node)).first()
         if hasattr(relationship, "start_node") and hasattr(relationship, "end_node"):
             raise Exception("dataset(s) already be the parent(s).")
-
         relationship = Relationship(start_node, relation_label, end_node)
+        for key, value in properties.items():
+            relationship[key] = value
         self.graph.create(relationship)
         return relationship
 
@@ -210,6 +213,8 @@ class Neo4jClient(object):
         start_node = self.nodes.get(start_id)
         end_node = self.nodes.get(end_id)
         relationship = self.relationships.match((start_node, end_node)).first()
+        if not properties:
+            properties = dict(relationship)
         self.graph.separate(relationship)
         relationship = Relationship(start_node, new_label, end_node)
         for key, value in properties.items():
@@ -260,7 +265,6 @@ class Neo4jNode(object):
         res = neo4j_session.run(query)
 
         return res
-
 
 class Neo4jRelationship(object):
 
@@ -425,7 +429,7 @@ class Neo4jRelationship(object):
             partial_fields = end_query.get(label, {}).pop("partial", [])
             for key, value in end_query.get(label, {}).items():
                 if not isinstance(value, str) and key in partial_fields:
-                    raise "Only string parameters can use partial search"
+                    raise Exception("Only string parameters can use partial search")
                 if key == "id":
                     neo_query += f" AND ID(end_node) = $end_query_value_{count}{param_count}"
                 #elif key in ["time_created", "time_lastmodified"]:
@@ -453,7 +457,7 @@ class Neo4jRelationship(object):
         if page_kwargs.get("order_type"):
             order_type = page_kwargs['order_type']
             if not order_type.lower() in ["desc", "asc"]:
-                raise "Invalid order_type"
+                raise Exception("Invalid order_type")
             neo_query += f' {order_type}'
         if page_kwargs.get("skip"):
             skip = page_kwargs["skip"]
@@ -465,10 +469,21 @@ class Neo4jRelationship(object):
         result = neo4j_session.run(neo_query, **neo_params)
         return result, total
 
-    def get_connected_nodes(self, global_entity_id):
+    def get_connected_nodes(self, global_entity_id, relation='own', direction='input'):
         neo4j_session = neo4j_connection.session()
-        query = 'MATCH ({global_entity_id: $geid})<-[:own*]-(connected) RETURN connected as node'
-
-        res = neo4j_session.run(query, geid=global_entity_id)
+        query_map_direction = {
+            "input": 'MATCH ({global_entity_id: $geid})<-[:' + relation + '*]-(connected) RETURN connected as node',
+            "output": 'MATCH ({global_entity_id: $geid})-[:' + relation + '*]->(connected) RETURN connected as node',
+            "both": 'MATCH ({global_entity_id: $geid})<-[:' + relation + '*]->(connected) RETURN connected as node'
+        }.get(direction.lower())
+        res = neo4j_session.run(query_map_direction, geid=global_entity_id)
 
         return res
+
+def neo_quick_query(query):
+    '''
+    quick count number of nodes in neo4j
+    '''
+    neo4j_session = neo4j_connection.session()
+    res = neo4j_session.run(query)
+    return res

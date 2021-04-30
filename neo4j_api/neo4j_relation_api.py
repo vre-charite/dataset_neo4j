@@ -30,13 +30,13 @@ class RelationshipActions(Resource):
         # get from the query
         start_id = post_data.get('start_id', None)
         end_id = post_data.get('end_id', None)
+        properties = post_data.get('properties', {})
         if not start_id and not end_id:
             return 'start_id and end_id are required', 403
-
         # make the label between node to node
         try:
             self.neo4j_method.add_relation_between_nodes(
-                label, start_id, end_id)
+                label, start_id, end_id, properties=properties)
         except Exception as e:
             return str(e), 403
 
@@ -470,9 +470,12 @@ class RelationConnected(Resource):
         client = Neo4jRelationship()
         """
         Get the nodes by the properties of node
+        Default relation is own
         """
         try:
-            res = self.client.get_connected_nodes(geid)
+            relation = request.args.get('relation', 'own')
+            direction = request.args.get('direction', 'input')
+            res = self.client.get_connected_nodes(geid, relation=relation, direction=direction)
             result = []
             for x in res:
                 result.append(neo4j_obj_2_json(x)["node"])

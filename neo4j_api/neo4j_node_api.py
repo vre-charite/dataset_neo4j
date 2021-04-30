@@ -588,6 +588,57 @@ class NodeQuickCountAPI(Resource):
             if where_condition:
                 query+=" where {}".format(where_condition)
             query+=" RETURN count(n) as count"
+            print(query)
+            res = neo_quick_query(query)
+            for record in res:
+                result = record.items()[0][1]
+            return {"result": result}, 200
+        except Exception as e:
+            print(e)
+            return str(e), 403
+
+class FileQuickCountAPI(Resource):
+    node_method = Neo4jNode()
+    get_return = """
+    {
+        "result": [
+        ]
+    }
+    """
+    @node_ns.doc(params={
+        'labels': 'Greenroom:File',
+        'other_args': '[str] or [bool] or [int]'})
+    @node_ns.response(200, get_return)
+    def get(self):
+        """
+        only can be used for file data
+        """
+        try:
+            labels = request.args.get('labels', None)
+            if not labels:
+                    return "labels is required", 404
+            # get query params
+            query_params_kwargs = {}
+            for arg_key in request.args:
+                if not arg_key=='labels':
+                    query_params_kwargs[arg_key] = request.args[arg_key]
+            project_code = "{}".format(query_params_kwargs['project_code'])
+            del query_params_kwargs['project_code']
+            where_condition = ""
+            if query_params_kwargs:
+                def convert_value(val):
+                    if val.startswith('[bool]'):
+                        return val.replace('[bool]', '').lower()
+                    if val.startswith('[int]'):
+                        return val.replace('[int]', '')
+                    return '"{}"'.format(val)
+                where_condition = " and ".join(['n.{}={}'.format(key, convert_value(query_params_kwargs[key])) \
+                    for key in query_params_kwargs])
+            query = 'MATCH (n:{}) <-[r:own]-(p:Dataset) where p.code="{}"'.format(labels, project_code)
+            if where_condition:
+                query+=" and {}".format(where_condition)
+            query+=" RETURN count(n) as count"
+            print(query)
             res = neo_quick_query(query)
             for record in res:
                 result = record.items()[0][1]

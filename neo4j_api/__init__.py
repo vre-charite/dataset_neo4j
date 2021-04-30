@@ -51,7 +51,8 @@ from .neo4j_node_api import (
 	ActionOnProperty,
     ChangeLabels,
     NodeQueryAPI,
-	NodeQuickCountAPI
+	NodeQuickCountAPI,
+	FileQuickCountAPI
 )
 from .neo4j_relation_api import (
 	RelationshipActions, 
@@ -70,6 +71,7 @@ node_ns.add_resource(ActionOnNodeByQuery, '/v1/neo4j/nodes/<label>/query')
 node_ns.add_resource(CountActionOnNodeByQuery, '/v1/neo4j/nodes/<label>/query/count')
 node_ns.add_resource(NodeQueryAPI, '/v2/neo4j/nodes/query')
 node_ns.add_resource(NodeQuickCountAPI, '/v1/neo4j/nodes/quick/count')
+node_ns.add_resource(FileQuickCountAPI, '/v1/neo4j/file/quick/count')
 
 node_ns.add_resource(ActionOnProperty, '/v1/neo4j/nodes/<label>/properties')
 node_ns.add_resource(ChangeLabels, '/v1/neo4j/nodes/<id>/labels')

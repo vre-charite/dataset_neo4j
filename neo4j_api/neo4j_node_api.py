@@ -634,7 +634,7 @@ class FileQuickCountAPI(Resource):
                     return '"{}"'.format(val)
                 where_condition = " and ".join(['n.{}={}'.format(key, convert_value(query_params_kwargs[key])) \
                     for key in query_params_kwargs])
-            query = 'MATCH (n:{}) <-[r:own]-(p:Dataset) where p.code="{}"'.format(labels, project_code)
+            query = 'MATCH (n:{}) <-[r:own*]-(p:Dataset) where p.code="{}"'.format(labels, project_code)
             if where_condition:
                 query+=" and {}".format(where_condition)
             query+=" RETURN count(n) as count"

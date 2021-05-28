@@ -455,8 +455,8 @@ class TestNeo4jUsers(TestNeo4jDataset):
             "name": "unittestuser1",
             "path": "users",
             "email": "amy.guindoc12+10@gmail.com",
-            "first_name": "test",
-            "last_name": "user",
+            "first_name": "testunittest",
+            "last_name": "unittestOnly",
             "role": "admin",
             "status": "active"
         }
@@ -471,12 +471,12 @@ class TestNeo4jUsers(TestNeo4jDataset):
             "status": "active"
         }
     updated_payload = {
-            "name": "unittestuser11",
+            "name": "unittestuser1",
             "email": "amy.guindoc12+11@gmail.com"
     }
 
     updated_payload2 = {
-            "name": "unittestuser12",
+            "name": "unittestuser1",
             "email": "amy.guindoc12+12@gmail.com"
     }
 
@@ -492,8 +492,8 @@ class TestNeo4jUsers(TestNeo4jDataset):
             "order_by": "name",
             "order_type": "desc",
             "query": {
-                "first_name": "test",
-                "last_name": "user",
+                "first_name": "testunittest",
+                "last_name": "unittestOnly",
                 "labels": [
                     label
                     ]
@@ -501,6 +501,7 @@ class TestNeo4jUsers(TestNeo4jDataset):
             }
 
     property_key = ['name', 'email']
+    teardown_user_id = []
     #is_delete = False
     log = Logger(name='test_neo4j_user.log')
 
@@ -526,13 +527,18 @@ class TestNeo4jUsers(TestNeo4jDataset):
         except Exception as e:
             cls.log.error(f"Error happened during setup: {e}")
             raise unittest.SkipTest(f"Failed setup test {e}")
-    
+
     @classmethod
     def teardown_class(cls):
         cls.log.info("\n")
         cls.log.info("START TEAR DOWN PROCESS".ljust(80, '-'))
-        cls.test.delete_node(cls.dataset_id, cls.label)
-        cls.test.delete_node(cls.update_dataset_id, cls.label)
+        if (cls.dataset_id in cls.teardown_user_id) and (cls.update_dataset_id in cls.teardown_user_id):
+            cls.log.info(f"teardown_user_id {cls.teardown_user_id}")
+            for i in cls.teardown_user_id:
+                cls.test.delete_node(i, cls.label)
+        else:
+            cls.test.delete_node(cls.dataset_id, cls.label)
+            cls.test.delete_node(cls.update_dataset_id, cls.label)
         #cls.test.delete_node(cls.delete_dataset_id, cls.label)
 
     @unittest.skip('broken')
@@ -637,6 +643,7 @@ class TestNeo4jUsers(TestNeo4jDataset):
             raise e
 
     @skipIfTrue("skip_condition")
+    # @unittest.skip("require data cleaning before proceed")
     def test_08_1_query_user(self):
         self.log.info("\n")
         self.log.info('08'+ f'test the listing of {self.label}'.center(80, '-'))
@@ -645,17 +652,24 @@ class TestNeo4jUsers(TestNeo4jDataset):
         query_load = {
             "name": self.payload["name"]
         }
+        self.log.info(f"query payload: {query_load}")
         try:
-            res = self.app.post(testing_api, json = query_load)
+            res = self.app.post(testing_api, json=query_load)
             self.log.info(f"GET RESPONSE: {res}")
             self.log.info(f"RESPONSE DATA: {res.data}")
             self.log.info(f"COMPARING: {res.status_code} VS {200}")
-            response = res.json[0]
-            self.log.info(f"COMPARING: user_id {response.get('id', None)} VS actual_id {self.dataset_id}")
-            self.assertEqual(response.get('id', None), self.dataset_id)
+            response = res.json
+            result_response = {}
+            for i in response:
+                self.teardown_user_id.append(i['id'])
+                if i['id'] == self.dataset_id:
+                    result_response = i
+            self.log.info(f"teardown node id: {self.teardown_user_id}")
+            self.log.info(f"COMPARING: user_id {self.teardown_user_id} VS actual_id {self.dataset_id}")
+            self.assertIn(self.dataset_id, self.teardown_user_id)
             for x in self.payload:
-                self.log.info(f"COMPARING ATTRIBUTE of {x}: {self.attribute[x]} VS {response.get(x, None)}")
-                self.assertEqual(self.payload[x], response.get(x, None))
+                self.log.info(f"COMPARING ATTRIBUTE of {x}: {self.payload [x]} VS {result_response.get(x, None)}")
+                self.assertEqual(self.payload[x], result_response.get(x, None))
         except Exception as e:
             self.log.error(e)
             raise e    

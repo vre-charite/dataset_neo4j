@@ -16,21 +16,23 @@ import neotime
 import ast
 import re
 
+
 class Neo4jClient(object):
-     
+
     def __init__(self):
         self._logger = SrvLoggerFactory('api_invitation').get_logger()
         try:
             self.graph = Graph(
-                ConfigClass.NEO4J_URL, 
-                username=ConfigClass.NEO4J_USER, 
+                ConfigClass.NEO4J_URL,
+                username=ConfigClass.NEO4J_USER,
                 password=ConfigClass.NEO4J_PASS,
                 max_connections=200,
             )
             self.nodes = NodeMatcher(self.graph)
             self.relationships = RelationshipMatcher(self.graph)
         except Exception as e:
-            self._logger.error("Error in __init__ connecting to Neo4j:" + str(e))
+            self._logger.error(
+                "Error in __init__ connecting to Neo4j:" + str(e))
 
     def add_node(self, label, name, param={}):
         if label[0].isnumeric():
@@ -43,7 +45,7 @@ class Neo4jClient(object):
             del param["extra_labels"]
 
         node = Node(
-            label, 
+            label,
             name=name,
             time_created=neotime.DateTime.utc_now(),
             time_lastmodified=neotime.DateTime.utc_now(),
@@ -59,23 +61,23 @@ class Neo4jClient(object):
         # if we have parent then add relationship
         if parent_id and parent_relation:
             end_node = self.nodes.get(parent_id)
-            relationship = Relationship(node, parent_relation, end_node) 
+            relationship = Relationship(node, parent_relation, end_node)
             self.graph.create(relationship)
         self.graph.create(node)
         return node
 
     def get_node(self, label, id):
         return self.graph.nodes.match(label).where("id(_) = %d" % id).first()
-        #return self.graph.nodes.get(id)
+        # return self.graph.nodes.get(id)
 
     # in order to facilitate the query in the frontend
     # we provide all the possible key with value with it
     def get_property_by_label(self, label):
         #neo4j_session = neo4j_connection.session()
-        #query = 'MATCH (n:%s) UNWIND keys(n) as key \
+        # query = 'MATCH (n:%s) UNWIND keys(n) as key \
         #    return key, collect(distinct n[key]) as options' % (label)
         #res = neo4j_session.run(query)
-        #return res
+        # return res
         return self.nodes.match(label).all()
 
     def update_node(self, label, id, params={}, update_modified_time=True):
@@ -107,9 +109,9 @@ class Neo4jClient(object):
         return node
 
     def query_node(self, label, params=None, limit=None, skip=None, count=False, partial=False, order_by=None, order_type=None):
-        tags = [] 
+        tags = []
         query_params = {}
-        create_time = {} 
+        create_time = {}
         for key, value in params.items():
             if "create_time" in key:
                 create_time[key] = value
@@ -128,7 +130,7 @@ class Neo4jClient(object):
             elif key == "full_path" and not partial:
                 query_params[key] = value
             elif key == "status" and isinstance(value, list):
-                query_params[key] = IN(value) 
+                query_params[key] = IN(value)
             elif isinstance(value, str):
                 # LIKE uses a regex, so we use regex escape for special characters
                 value = re.escape(value)
@@ -152,10 +154,14 @@ class Neo4jClient(object):
             query = self.nodes.match(*label)
 
         if create_time:
-            start = create_time.get("create_time_start", datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"))
-            end = create_time.get("create_time_end", datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"))
-            query = query.where(f"datetime(_.time_created) > datetime('{start}')")
-            query = query.where(f"datetime(_.time_created) < datetime('{end}')")
+            start = create_time.get(
+                "create_time_start", datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"))
+            end = create_time.get(
+                "create_time_end", datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"))
+            query = query.where(
+                f"datetime(_.time_created) > datetime('{start}')")
+            query = query.where(
+                f"datetime(_.time_created) < datetime('{end}')")
         if tags:
             for tag in tags:
                 tag = tag.replace("\\", "\\\\")
@@ -163,7 +169,7 @@ class Neo4jClient(object):
 
         if count:
             return query.count()
-        if order_by: 
+        if order_by:
             if order_type and order_type.lower() == "desc":
                 order_by = f"_.{order_by} DESC"
             else:
@@ -173,7 +179,7 @@ class Neo4jClient(object):
             query = query.limit(limit)
         if skip:
             query = query.skip(skip)
-        return query.all() 
+        return query.all()
 
     # method allow to query the relationship
     # also the parameter allow the none so that we can query the 1-to-1
@@ -184,8 +190,8 @@ class Neo4jClient(object):
             start_node = self.nodes.get(start_id)
         if end_id:
             end_node = self.nodes.get(end_id)
-        
-        # avoid case of id = 0 
+
+        # avoid case of id = 0
         if not str(start_node) or not str(end_node):
             return []
         if relation_label:
@@ -226,7 +232,8 @@ class Neo4jClient(object):
         start_node = self.nodes.get(start_id)
         end_node = self.nodes.get(end_id)
         if start_node and end_node:
-            relationship = self.relationships.match((start_node, end_node)).first()
+            relationship = self.relationships.match(
+                (start_node, end_node)).first()
             self.graph.separate(relationship)
             return relationship
         else:
@@ -266,12 +273,13 @@ class Neo4jNode(object):
 
         return res
 
+
 class Neo4jRelationship(object):
 
     # note here it is not necessary to have label and parameter
     def get_relation_with_params(self, relation_label=None,
                                  start_label=None, end_label=None,
-                                 start_params=None, end_params=None, 
+                                 start_params=None, end_params=None,
                                  count=False, partial=False, page_kwargs={}, extra_query="", sort_node="end"):
         def format_label(label):
             if isinstance(label, list):
@@ -293,7 +301,7 @@ class Neo4jRelationship(object):
 
         query = 'match p=(start_node%s)-[r%s]->(end_node%s) %s' % (
                 start_label, relation_label, end_label, extra_query)
- 
+
         if(isinstance(start_params, dict)):
             query += 'where'
             for key, value in start_params.items():
@@ -306,7 +314,7 @@ class Neo4jRelationship(object):
                 else:
                     if partial:
                         if key == 'name':
-                            query += ' start_node.{key} = {value} and'.format(
+                            query += ' start_node.{key} CONTAINS {value} and'.format(
                                 key=key, value=value)
                         else:
                             query += ' start_node.{key} contains {value} and'.format(
@@ -333,10 +341,10 @@ class Neo4jRelationship(object):
                 else:
                     # Exclude from partial search in == is in value
                     if value and isinstance(value, str) and value.startswith("'=="):
-                        value = "'" + value [3:]
-                        partial_exclude = True 
+                        value = "'" + value[3:]
+                        partial_exclude = True
                     else:
-                        partial_exclude = False 
+                        partial_exclude = False
 
                     if partial_exclude or isinstance(value, bool) or isinstance(value, int):
                         if key in ["container_id"] or isinstance(value, bool) or isinstance(value, int):
@@ -361,8 +369,10 @@ class Neo4jRelationship(object):
                                 query += ' TOLOWER(end_node.{key}) = TOLOWER({value}) and'.format(
                                     key=key, value=value)
             if create_time:
-                start = create_time.get("create_time_start", "'" + datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S") + "'")
-                end = create_time.get("create_time_end", "'" + datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S") + "'")
+                start = create_time.get(
+                    "create_time_start", "'" + datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S") + "'")
+                end = create_time.get(
+                    "create_time_end", "'" + datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S") + "'")
                 query += f" datetime(end_node.time_created) > datetime({start}) and"
                 query += f" datetime(end_node.time_created) < datetime({end}) and"
             query = query[:-3]
@@ -429,17 +439,18 @@ class Neo4jRelationship(object):
             partial_fields = end_query.get(label, {}).pop("partial", [])
             for key, value in end_query.get(label, {}).items():
                 if not isinstance(value, str) and key in partial_fields:
-                    raise Exception("Only string parameters can use partial search")
+                    raise Exception(
+                        "Only string parameters can use partial search")
                 if key == "id":
                     neo_query += f" AND ID(end_node) = $end_query_value_{count}{param_count}"
-                #elif key in ["time_created", "time_lastmodified"]:
+                # elif key in ["time_created", "time_lastmodified"]:
                 #    pass
                 else:
                     if partial_fields and key in partial_fields:
                         neo_query += f" AND TOLOWER(end_node.{key}) CONTAINS TOLOWER($end_query_value_{count}{param_count})"
                     else:
                         neo_query += f" AND end_node.{key} = $end_query_value_{count}{param_count}"
-                neo_params[f"end_query_value_{count}{param_count}"] = value 
+                neo_params[f"end_query_value_{count}{param_count}"] = value
                 param_count += 1
             neo_query += ")"
             count += 1
@@ -479,6 +490,7 @@ class Neo4jRelationship(object):
         res = neo4j_session.run(query_map_direction, geid=global_entity_id)
 
         return res
+
 
 def neo_quick_query(query):
     '''

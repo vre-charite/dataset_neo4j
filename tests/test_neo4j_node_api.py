@@ -24,7 +24,7 @@ def skipIfTrue(flag):
 #@unittest.skip('not used for now')
 class TestNeo4jDataset(unittest.TestCase):
     # some node properties
-    label = "Dataset"
+    label = "Container"
     #dataset for put, get 
     dataset_id = None
     #update label
@@ -39,7 +39,7 @@ class TestNeo4jDataset(unittest.TestCase):
             "code": "utest",
             "description": "unit test dataset, will be deleted soon",
             "discoverable": True,
-            "type": "Dataset",
+            "type": "Container",
             "tags": [
                 "tag1"
             ]
@@ -51,7 +51,7 @@ class TestNeo4jDataset(unittest.TestCase):
         "code": "ctest",
         "description": "unit test dataset, will be deleted soon",
         "discoverable": True,
-        "type": "Dataset",
+        "type": "Container",
         "tags": [
             "tag1"
             ]
@@ -121,7 +121,7 @@ class TestNeo4jDataset(unittest.TestCase):
         if self.label == "User":
             self.skip_condition = False
             self.skip_only = True
-        elif self.label == "Dataset":
+        elif self.label == "Container":
             self.skip_only = False
             self.skip_condition = True
         else:
@@ -214,7 +214,7 @@ class TestNeo4jDataset(unittest.TestCase):
             self.log.error(e)
             raise e
 
-    #@unittest.skip
+    @unittest.skip
     def test_02_1_update_dataset_with_wrong_id(self):
         self.log.info("\n")
         self.log.info('02.1'+ f'test update {self.label} with not exist id'.center(80, '-'))
@@ -401,7 +401,7 @@ class TestNeo4jDataset(unittest.TestCase):
             self.log.error(e)
             raise e
     
-    #@unittest.skip
+    @unittest.skip
     def test_06_1_get_deleted_dataset(self):
         self.log.info("\n")
         self.log.info('06.1'+ f'test get {self.label} with deleted node'.center(80, '-'))
@@ -419,7 +419,7 @@ class TestNeo4jDataset(unittest.TestCase):
             self.log.error(e)
             raise e
 
-    #@unittest.skip
+    @unittest.skip
     def test_06_2_get_dataset_with_wrong_id(self):
         self.log.info("\n")
         self.log.info('06.2'+ f'test get {self.label} with not exist id'.center(80, '-'))
@@ -692,7 +692,7 @@ class TestNeo4jFiles(TestNeo4jUsers):
             "code": "utest",
             "description": "unit test dataset, will be deleted soon",
             "discoverable": True,
-            "type": "Dataset",
+            "type": "Container",
             "tags": [
                 "tag1"
             ]
@@ -772,7 +772,7 @@ class TestNeo4jFiles(TestNeo4jUsers):
         path = "/data/vre-storage/"
         try:
             # create node for dataset_id
-            cls.create_dataset = cls.test.create_node("Dataset", cls.dataset_payload)
+            cls.create_dataset = cls.test.create_node("Container", cls.dataset_payload)
             # create file in the test dataset
             cls.payload["path"] = path  + cls.dataset_payload['path'] + "/raw"
             cls.payload["full_path"] = cls.payload["path"] + "/" + cls.payload["name"]
@@ -788,7 +788,7 @@ class TestNeo4jFiles(TestNeo4jUsers):
             copy_payload["full_path"] = copy_payload["path"] + "/" + copy_payload["name"]
             cls.delete_dataset_id = cls.test.create_node(cls.label, copy_payload)
         except Exception as e:
-            cls.test.delete_node(cls.create_dataset, "Dataset")
+            cls.test.delete_node(cls.create_dataset, "Container")
             cls.log.error(f"Error happened during setup: {e}")
             raise unittest.SkipTest(f"Failed setup test {e}")
 
@@ -796,7 +796,7 @@ class TestNeo4jFiles(TestNeo4jUsers):
     def teardown_class(cls):
         cls.log.info("\n")
         cls.log.info("START TEAR DOWN PROCESS".ljust(80, '-'))
-        cls.test.delete_node(cls.create_dataset, "Dataset")
+        cls.test.delete_node(cls.create_dataset, "Container")
         cls.test.delete_node(cls.dataset_id, cls.label)
         cls.test.delete_node(cls.update_dataset_id, cls.label)
         #cls.test.delete_node(cls.delete_dataset_id, cls.label)

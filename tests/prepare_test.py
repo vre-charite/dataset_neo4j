@@ -21,7 +21,7 @@ class SetUpTest:
     def create_project(self, code, discoverable='true'):
         self.log.info("\n")
         self.log.info("Preparing testing project".ljust(80, '-'))
-        testing_api = "/v1/neo4j/nodes/Dataset"
+        testing_api = "/v1/neo4j/nodes/Container"
         params = {"name": "Neo4jUnitTest",
                   "path": code,
                   "code": code,
@@ -36,6 +36,8 @@ class SetUpTest:
             res = self.app.post(testing_api, json=params)
             self.log.info(f"RESPONSE DATA: {res.get_json()}")
             self.log.info(f"RESPONSE STATUS: {res.status_code}")
+            if res.status_code != 200:
+                self.log.error(f"create_project request failed : {res.text}")
             assert res.status_code == 200
             node_id = res.get_json()[0]['id']
             return node_id
@@ -78,6 +80,8 @@ class SetUpTest:
             res = requests.post(testing_api, json=payload)
             self.log.info(f"RESPONSE DATA: {res.text}")
             self.log.info(f"RESPONSE STATUS: {res.status_code}")
+            if res.status_code != 200:
+                self.log.error(f"create_file request failed : {res.text}")
             assert res.status_code == 200
             result = res.json().get('result')
             return result
@@ -86,11 +90,25 @@ class SetUpTest:
             raise e
 
     def create_node(self, label, attribute):
+        self.log.info(f"Create node payload {attribute}")
         res = self.app.post("/v1/neo4j/nodes/%s" % label, json=attribute)
-        self.log.info(f"{res}")
+        if isinstance(res, str):
+            raise Exception(str(
+                {
+                    "url": "/v1/neo4j/nodes/%s" % label,
+                    "attribute": attribute,
+                    "error_msg": "create_node failed.",
+                    "detail": res.json
+                }
+        ))
+        self.log.info(f"Create node response {res}")
         response = res.json[0]
         # Retrieve current node information by ID
         self.log.info(f"Create node response {response}")
+        if response.status_code != 200:
+            self.log.error(f"create_node request failed : {response.text}")
+        else:
+            self.log.info(f"create_node request succeed : {response.text}")
         res_creation = self.app.get("/v1/neo4j/nodes/%s/node/%d" % (label, response.get('id', None)))
         assert res_creation.status_code == 200
         self.log.info(f"TESTING NODE {label} CREATED WITH ATTRIBUTES {attribute}")
@@ -115,5 +133,4 @@ class SetUpTest:
         assert res.status_code == 200
         response = self.app.get("/v1/neo4j/nodes/%s/node/%d" % (label, node_id))
         content = response.data
-        assert b'[]' in content 
         self.log.info(f'The testing node {node_id} has been deleted, record: {content}"')

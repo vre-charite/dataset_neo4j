@@ -13,7 +13,7 @@ class RelationshipActions(Resource):
 
     post_module = module_api.model('relation_add_module', {
         'start_id': fields.Integer(readOnly=True, description='Id of the start node (User)'),
-        'end_id': fields.Integer(readOnly=True, description='Id of the end node (Dataset)')
+        'end_id': fields.Integer(readOnly=True, description='Id of the end node (Container)')
     })
 
     # recieve the parameter to add edge between two
@@ -99,7 +99,7 @@ class RelationshipActionsLabelOption(Resource):
     @relationship_ns.response(200, get_return)
     @relationship_ns.response(403, 'Exception')
     @relationship_ns.doc(params={"params":"{'start_id': 'start node id (User)', "
-                                          "'end_id': 'end node id (Dataset)', "
+                                          "'end_id': 'end node id (Container)', "
                                           "'label': 'relation label (admin/contributor)'}"})
     def get(self):
         """
@@ -208,7 +208,7 @@ class ActionOnRelationshipByQuery(Resource):
     post_module = module_api.model('relation_query_module', {
         'label': fields.String(readOnly=True, description='Label of relationship'),
         'start_label': fields.String(readOnly=True, description="Label of start node, normally use as 'User'"),
-        'end_label': fields.String(readOnly=True, description="Label of end node, normally use as 'Dataset"),
+        'end_label': fields.String(readOnly=True, description="Label of end node, normally use as 'Container"),
         'start_params': fields.Raw(readOnly=True, description='Json attributes start node has, such as id, name, email and so on'),
         'end_params': fields.Raw(readOnly=True, description='Json attributes end node has, such as id, code, name and so on')
     })
@@ -217,7 +217,7 @@ class ActionOnRelationshipByQuery(Resource):
     [
         {'end_node': {
                 'id': <node-id>, 
-                'labels': ['Dataset'], 
+                'labels': ['Container'], 
                 'path': <nfs-path>, 
                 'code': <project-code>, 
                 'time_lastmodified': <time-string>, 
@@ -321,11 +321,11 @@ class CountActionOnRelationshipByQuery(Resource):
         "start_label": fields.String(readOnly=True,
                                          description="Label of start node, normally use 'User'"),
         "end_label": fields.String(readOnly=True,
-                                          description="Label of end node, normally use 'Dataset'"),
+                                          description="Label of end node, normally use 'Container'"),
         'start_params': fields.Raw(readOnly=True,
                                         description="start_node(User) attributes, such as {'name': <user-name>} or {'email': <user-email>}"),
         'end_params': fields.Raw(readOnly=True,
-                                      description="end_node(Dataset) attributes, such as {'code': <project-code>}")
+                                      description="end_node(Container) attributes, such as {'code': <project-code>}")
     })
 
     @relationship_ns.expect(relation_query_module_count)
@@ -361,6 +361,12 @@ class RelationshipQueryV2(Resource):
     client = Neo4jRelationship()
 
     def post(self):
+        '''
+        the api will fetch all the connected node from start_node & end_node
+        even those two node are not connected
+        '''
+
+
         post_data = request.get_json()
         start_label = post_data.get("start_label", None)
         end_labels = post_data.get("end_labels", None)
@@ -446,7 +452,7 @@ class RelationConnected(Resource):
             {
                 "id": 21,
                 "labels": [
-                    "Dataset"
+                    "Container"
                 ],
                 "global_entity_id": "dataset-4f640b7e-85be-11eb-99fe-eaff9e667817-1615833798",
                 "path": "gregtest",

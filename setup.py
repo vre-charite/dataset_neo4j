@@ -10,7 +10,7 @@ neo4j_session.run(user_init)
 
 db_constraint_init = '''
     CREATE CONSTRAINT constraint_code
-    ON (n:Dataset)
+    ON (n:Container)
     ASSERT n.code IS UNIQUE
 '''
 

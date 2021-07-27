@@ -18,7 +18,7 @@ def skipIfTrue(flag):
 #@unittest.skip('not used for now')
 class TestNeo4jDatasetUserRelation(unittest.TestCase):
     start_node_label = "User"
-    end_node_label = "Dataset"
+    end_node_label = "Container"
     relation_label = "admin"
     start_node_attribute = {
             "name": "unittestuser1",
@@ -35,7 +35,7 @@ class TestNeo4jDatasetUserRelation(unittest.TestCase):
             "code": "utest",
             "description": "unit test dataset, will be deleted soon",
             "discoverable": True,
-            "type": "Dataset",
+            "type": "Container",
             "tags": [
                 "tag1"
             ]
@@ -67,7 +67,7 @@ class TestNeo4jDatasetUserRelation(unittest.TestCase):
         cls.test.delete_node(cls.end_node_id, cls.end_node_label)
 
     def setUp(self):
-        if (self.start_node_label == "User") and (self.end_node_label == "Dataset"):
+        if (self.start_node_label == "User") and (self.end_node_label == "Container"):
             self.skip_condition = False
         else:
             self.skip_condition = True
@@ -117,7 +117,7 @@ class TestNeo4jDatasetUserRelation(unittest.TestCase):
             self.log.error(e)
             raise e
 
-    #@unittest.skip("later")
+    @unittest.skip("later")
     def test_01_3_create_relation_for_self(self):
         self.log.info("\n")
         self.log.info('01.3' + 'test create_relation_for_self'.center(80, '-'))
@@ -607,7 +607,7 @@ class TestNeo4jDatasetUserRelation(unittest.TestCase):
     def test_16_update_relation_for_non_exist_relation(self):
         self.log.info("\n")
         self.log.info('16' + 'test update_relation_for_non_exist_relation'.center(80, '-'))
-        if self.start_node_label == "Dataset":
+        if self.start_node_label == "Container":
             update_payload = {
                 "path": "utest1",
                 "code": "utest1"
@@ -704,7 +704,7 @@ class TestNeo4jDatasetUserRelation(unittest.TestCase):
             self.log.error(e)
             raise e
 
-    #@unittest.skip("later")
+    @unittest.skip("need update")
     def test_20_get_non_exist_id_by_relation(self):
         self.log.info("\n")
         self.log.info('20' + 'test get_none_exist_id_by_relation'.center(80, '-'))
@@ -1202,7 +1202,7 @@ class TestNeo4jDatasetUserRelation(unittest.TestCase):
 
 #@unittest.skip('not used for now')
 class TestNeo4jDatasetFileRelation(TestNeo4jDatasetUserRelation):
-    start_node_label = "Dataset"
+    start_node_label = "Container"
     end_node_label = "File"
     relation_label = "own"
     start_node_attribute = {
@@ -1211,7 +1211,7 @@ class TestNeo4jDatasetFileRelation(TestNeo4jDatasetUserRelation):
             "code": "utest",
             "description": "unit test dataset, will be deleted soon",
             "discoverable": True,
-            "type": "Dataset",
+            "type": "Container",
             "tags": [
                 "tag1"
             ]
@@ -1278,7 +1278,7 @@ class TestNeo4jUserFolderRelation(TestNeo4jDatasetFileRelation):
             "code": "utest",
             "description": "unit test dataset, will be deleted soon",
             "discoverable": True,
-            "type": "Dataset",
+            "type": "Container",
             "tags": [
                 "tag1"
             ]
@@ -1297,7 +1297,7 @@ class TestNeo4jUserFolderRelation(TestNeo4jDatasetFileRelation):
         cls.app = cls.test.app
         cls.log.info("Preparing test".ljust(80, '-'))
         try:
-            cls.container_id = cls.test.create_node("Dataset", cls.dataset_attribute)
+            cls.container_id = cls.test.create_node("Container", cls.dataset_attribute)
             cls.start_node_id = cls.test.create_node(cls.start_node_label, cls.start_node_attribute)
             cls.end_node_attribute["container_id"] = cls.container_id
             cls.end_node_id = cls.test.create_node(cls.end_node_label, cls.end_node_attribute)
@@ -1309,6 +1309,6 @@ class TestNeo4jUserFolderRelation(TestNeo4jDatasetFileRelation):
     def tearDownClass(cls):
         cls.log.info("\n")
         cls.log.info("START TEAR DOWN PROCESS".ljust(80, '-'))
-        cls.test.delete_node(cls.container_id, "Dataset")
+        cls.test.delete_node(cls.container_id, "Container")
         cls.test.delete_node(cls.start_node_id, cls.start_node_label)
         cls.test.delete_node(cls.end_node_id, cls.end_node_label)

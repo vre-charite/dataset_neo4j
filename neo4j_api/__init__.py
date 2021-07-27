@@ -45,6 +45,7 @@ relationship_ns = module_api.namespace('Relationship', description='Operation on
 
 from .neo4j_node_api import (
 	ActionOnNodeById, 
+	ActionOnNodeByGeid,
 	CreateNode, 
 	ActionOnNodeByQuery, 
 	CountActionOnNodeByQuery, 
@@ -66,6 +67,7 @@ from .neo4j_relation_api import (
 
 
 node_ns.add_resource(ActionOnNodeById, '/v1/neo4j/nodes/<label>/node/<id>')
+node_ns.add_resource(ActionOnNodeByGeid, '/v1/neo4j/nodes/geid/<geid>')
 node_ns.add_resource(CreateNode, '/v1/neo4j/nodes/<label>')
 node_ns.add_resource(ActionOnNodeByQuery, '/v1/neo4j/nodes/<label>/query')
 node_ns.add_resource(CountActionOnNodeByQuery, '/v1/neo4j/nodes/<label>/query/count')

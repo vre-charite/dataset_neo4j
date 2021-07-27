@@ -70,6 +70,10 @@ class Neo4jClient(object):
         return self.graph.nodes.match(label).where("id(_) = %d" % id).first()
         # return self.graph.nodes.get(id)
 
+    def get_node_by_geid(self, geid):
+        return self.graph.nodes.match(**{"global_entity_id":geid}).first()
+        # return self.graph.nodes.get(id)
+
     # in order to facilitate the query in the frontend
     # we provide all the possible key with value with it
     def get_property_by_label(self, label):
@@ -437,6 +441,7 @@ class Neo4jRelationship(object):
             neo_params[f"end_label_{count}"] = label
             param_count = 0
             partial_fields = end_query.get(label, {}).pop("partial", [])
+            startswith_fields = end_query.get(label, {}).pop("startswith", [])
             for key, value in end_query.get(label, {}).items():
                 if not isinstance(value, str) and key in partial_fields:
                     raise Exception(
@@ -448,6 +453,8 @@ class Neo4jRelationship(object):
                 else:
                     if partial_fields and key in partial_fields:
                         neo_query += f" AND TOLOWER(end_node.{key}) CONTAINS TOLOWER($end_query_value_{count}{param_count})"
+                    elif startswith_fields and key in startswith_fields:
+                        neo_query += f" AND TOLOWER(end_node.{key}) STARTS WITH TOLOWER($end_query_value_{count}{param_count})"
                     else:
                         neo_query += f" AND end_node.{key} = $end_query_value_{count}{param_count}"
                 neo_params[f"end_query_value_{count}{param_count}"] = value

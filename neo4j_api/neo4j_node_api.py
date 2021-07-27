@@ -17,10 +17,10 @@ class ActionOnNodeById(Resource):
     node_method = Neo4jClient()
 
     get_returns = """
-     Dataset response: 
+     Container response: 
      [
         {'id': <Node-ID>,
-         'labels': ['Dataset'],
+         'labels': ['Container'],
          'code': <project-code>,
          'is_new': False,
          'last_login': '2020-11-23T17:06:27.600313',
@@ -66,7 +66,7 @@ class ActionOnNodeById(Resource):
     ]
     """
 
-    @node_ns.doc(params={'label': 'Dataset', 'id': 'Node ID'})
+    @node_ns.doc(params={'label': 'Container', 'id': 'Node ID'})
     @node_ns.response(200, get_returns)
     @node_ns.response(403, """Exception""")
     def get(self, label, id):
@@ -87,10 +87,10 @@ class ActionOnNodeById(Resource):
 
 
     put_returns = """
-        Dataset response:
+        Container response:
         [
             {"id": 66,
-             "labels": ["Dataset"],
+             "labels": ["Container"],
              "code": "firefoxcreation",
              "is_new"(If exists): false,
              "roles": ["admin", "contributor"],
@@ -138,7 +138,7 @@ class ActionOnNodeById(Resource):
         ]
     """
 
-    @node_ns.doc(params={'label': 'Dataset/User', 'id': 'Node ID'})
+    @node_ns.doc(params={'label': 'Container/User', 'id': 'Node ID'})
     @node_ns.expect(node_update_module)
     @node_ns.response(200, put_returns)
     @node_ns.response(403, 'Exception')
@@ -171,12 +171,86 @@ class ActionOnNodeById(Resource):
         return 'success', 200
 
 
+class ActionOnNodeByGeid(Resource):
+    # initialize the class for using the method
+    node_method = Neo4jClient()
+
+    get_returns = """
+     Container response: 
+     [
+        {'id': <Node-ID>,
+         'labels': ['Container'],
+         'code': <project-code>,
+         'is_new': False,
+         'last_login': '2020-11-23T17:06:27.600313',
+         'roles': [<project_enabled-roles>],
+         'description': <project-description>, 
+         'type': 'Usecase', 
+         'tags': [<project-tags>], 
+         'path': <nfs-path>,
+         'time_lastmodified': <time-string>,
+         'discoverable': <whether-discoverable-to-all-users>,
+         'name': <project-name>,
+         'time_created': <time-string>}
+     ]\n
+     User response:
+    [
+        {"id": <node-id>,
+         "labels": ["User"],
+         "path": "users",
+         "time_lastmodified": <time-string>,
+         "role": <user-role>,
+         "last_login": <time-string>,
+         "name": <username>,
+         "time_created": <time-string>,
+         "last_name": <lastname>,
+         "realm": "vre",
+         "first_name": <firstname>,
+         "email": <email>,
+         "status": "active"}
+    ]\n
+    Default response:
+    [
+        {
+            "id": <ID>,
+            "labels": [
+                <node-label>
+            ],
+            "name": <node-name>,
+            "time_created": <time-string>,
+            "time_lastmodified": <time-string>,
+            "other_property": "xxxx",
+            "other_property_2": "xxxx"
+        }
+    ]
+    """
+
+    @node_ns.doc(params={'geid': 'Node global entity id'})
+    @node_ns.response(200, get_returns)
+    @node_ns.response(403, """Exception""")
+    def get(self, geid):
+        """
+        Get the Node with the input geid since now most operation 
+        are use the geid
+        """
+        try:
+            result = self.node_method.get_node_by_geid(geid)
+            if result:
+                result = [node_2_json(result)]
+            else:
+                result = []
+        except Exception as e:
+            return str(e), 403
+
+        return result, 200
+
+
 class CreateNode(Resource):
     # initialize the class for using the method
     node_method = Neo4jClient()
 
     post_returns = """
-    Dataset response:
+    Container response:
     {
         "result": {
             "parent_relation": <relation-label>,
@@ -188,7 +262,7 @@ class CreateNode(Resource):
             "time_created": <time-string>,
             "name": <node-name>
             "labels": [
-                "Dataset"
+                "Container"
             ],
             "_key1": "value1",
             "parent_id": <parent-id>,
@@ -196,7 +270,7 @@ class CreateNode(Resource):
                 "tag1",
                 "tag2"
             ],
-            "type": "Dataset"
+            "type": "Container"
         }
     }\n
     User response:
@@ -227,7 +301,7 @@ class CreateNode(Resource):
     """
 
     @node_ns.expect(node_create_module)
-    @node_ns.doc(params={'label': 'Dataset/User'})
+    @node_ns.doc(params={'label': 'Container/User'})
     @node_ns.response(200, post_returns)
     @node_ns.response(403, """Exception""")
     def post(self, label):
@@ -397,7 +471,7 @@ class ActionOnProperty(Resource):
      "last_name": [<last-name>],
      "realm": ["vre"]
     }\n
-    Dataset response:
+    Container response:
     {"code": [<project-code>],
      "description": [<project-description>],
      "admin"(no longer in use): [<[project_creator-admin]>],
@@ -405,7 +479,7 @@ class ActionOnProperty(Resource):
      "discoverable": [false, true],
      "name": [<project-name>],
      "tags": [<[project-tags]>],
-     "labels": [["Dataset"]],
+     "labels": [["Container"]],
      "id": [<project-ID>],
      "is_new"(no longer in use): [false,true]
     }\n
@@ -415,7 +489,7 @@ class ActionOnProperty(Resource):
     }
     """
 
-    @node_ns.doc(params={'label': 'Dataset'})
+    @node_ns.doc(params={'label': 'Container'})
     @node_ns.response(200, get_returns)
     @node_ns.response(403, """Exception""")
     def get(self, label):
@@ -620,10 +694,11 @@ class FileQuickCountAPI(Resource):
             # get query params
             query_params_kwargs = {}
             for arg_key in request.args:
-                if not arg_key=='labels':
+                if arg_key!='labels' and arg_key!='startwith' :
                     query_params_kwargs[arg_key] = request.args[arg_key]
             project_code = "{}".format(query_params_kwargs['project_code'])
             del query_params_kwargs['project_code']
+            startwith = request.args.get('startwith', [])
             where_condition = ""
             if query_params_kwargs:
                 def convert_value(val):
@@ -632,9 +707,13 @@ class FileQuickCountAPI(Resource):
                     if val.startswith('[int]'):
                         return val.replace('[int]', '')
                     return '"{}"'.format(val)
-                where_condition = " and ".join(['n.{}={}'.format(key, convert_value(query_params_kwargs[key])) \
+                def condition_generator(key, value):
+                    operator = " STARTS WITH " if key in startwith else "="
+                    generated = 'n.{}{}{}'.format(key, operator, convert_value(value))
+                    return generated
+                where_condition = " and ".join([condition_generator(key, query_params_kwargs[key]) \
                     for key in query_params_kwargs])
-            query = 'MATCH (n:{}) <-[r:own*]-(p:Dataset) where p.code="{}"'.format(labels, project_code)
+            query = 'MATCH (n:{}) <-[r:own*]-(p:Container) where p.code="{}"'.format(labels, project_code)
             if where_condition:
                 query+=" and {}".format(where_condition)
             query+=" RETURN count(n) as count"

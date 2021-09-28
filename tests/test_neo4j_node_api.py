@@ -21,6 +21,19 @@ def skipIfTrue(flag):
         return wrapper
     return deco
 
+default_project_code_list = ["utest","utest2","utestup","utestd"]
+
+def setUpModule():
+    _log = Logger(name='test_neo4j_dataset.log')
+    _test = SetUpTest(_log)
+    for default_project_code in default_project_code_list:
+        project_details = _test.get_project_details(default_project_code)
+        if len(project_details) > 0:
+            project_id = _test.get_project_details(default_project_code)[0].get('id')
+            _log.info(f'Existing project_id: {project_id}')
+            _test.delete_node(project_id, "Container")
+
+
 #@unittest.skip('not used for now')
 class TestNeo4jDataset(unittest.TestCase):
     # some node properties
@@ -105,9 +118,16 @@ class TestNeo4jDataset(unittest.TestCase):
             for i in cls.payload_key:
                 copy_payload[i] = copy_payload[i] + "d"
             cls.delete_dataset_id = cls.test.create_node(cls.label, copy_payload)
+
+            payload = {
+                **cls.payload,
+                "global_entity_id": "neo4j_unit_test_geid",
+            }
+            payload["code"] = "utest2"
+            cls.dataset_id2 = cls.test.create_node(cls.label, payload)
         except Exception as e:
             cls.log.error(f"Error happened during setup: {e}")
-            raise unittest.SkipTest(f"Failed setup test {e}")
+            raise Exception(f"Failed setup test {e}")
 
     @classmethod
     def teardown_class(cls):
@@ -115,6 +135,7 @@ class TestNeo4jDataset(unittest.TestCase):
         cls.log.info("START TEAR DOWN PROCESS".ljust(80, '-'))
         cls.test.delete_node(cls.dataset_id, cls.label)
         cls.test.delete_node(cls.update_dataset_id, cls.label)
+        cls.test.delete_node(cls.dataset_id2, cls.label)
         #cls.test.delete_node(cls.delete_dataset_id, cls.label)
     
     def setUp(self):
@@ -437,6 +458,18 @@ class TestNeo4jDataset(unittest.TestCase):
         except Exception as e:
             self.log.error(e)
             raise e
+
+    @unittest.skip
+    def test_07_query_by_geids(self):
+        self.log.info("\n")
+        self.log.info('07'+ f'query_by_geids'.center(80, '-'))
+        testing_api = "/v1/neo4j/nodes/query/geids"
+        self.log.info(f"POST API: {testing_api}")
+        res = self.post.get(testing_api, {"geids": ["neo4j_unit_test_geid"]})
+        self.log.info(f"POST RESPONSE: {res}")
+        self.log.info(f"RESPONSE DATA: {res.data}")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(len(res.json["result"]), 1)
  
 
 #@unittest.skip('not used for now')
@@ -526,7 +559,7 @@ class TestNeo4jUsers(TestNeo4jDataset):
             cls.delete_dataset_id = cls.test.create_node(cls.label, copy_payload)
         except Exception as e:
             cls.log.error(f"Error happened during setup: {e}")
-            raise unittest.SkipTest(f"Failed setup test {e}")
+            raise Exception(f"Failed setup test {e}")
 
     @classmethod
     def teardown_class(cls):
@@ -535,8 +568,10 @@ class TestNeo4jUsers(TestNeo4jDataset):
         if (cls.dataset_id in cls.teardown_user_id) and (cls.update_dataset_id in cls.teardown_user_id):
             cls.log.info(f"teardown_user_id {cls.teardown_user_id}")
             for i in cls.teardown_user_id:
+                cls.log.info(f"Removing id: {i}")
                 cls.test.delete_node(i, cls.label)
         else:
+            cls.log.info(f"Removing {cls.dataset_id} and {cls.update_dataset_id}")
             cls.test.delete_node(cls.dataset_id, cls.label)
             cls.test.delete_node(cls.update_dataset_id, cls.label)
         #cls.test.delete_node(cls.delete_dataset_id, cls.label)
@@ -790,7 +825,7 @@ class TestNeo4jFiles(TestNeo4jUsers):
         except Exception as e:
             cls.test.delete_node(cls.create_dataset, "Container")
             cls.log.error(f"Error happened during setup: {e}")
-            raise unittest.SkipTest(f"Failed setup test {e}")
+            raise Exception(f"Failed setup test {e}")
 
     @classmethod
     def teardown_class(cls):

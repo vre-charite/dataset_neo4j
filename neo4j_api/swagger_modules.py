@@ -157,5 +157,10 @@ trashfile_module = module_api.model('file_trash', {
      "full_path": fields.String(description="full_path to file"),
 })
 
+node_batch_update = module_api.model('',{
+    'data': fields.List(fields.String, example=[{'global_entity_id': "6785869f-b017-4ed3-b602-a4ce7e8dcda2-1621605134", 'tags': ["test_bulk123"]},
+   ]
+)
+})
 
 #######################################################################

@@ -8,6 +8,93 @@ from . import relationship_ns, module_api
 from neo4j_api.swagger_modules import *
 
 
+class BatchRelationshipActions(Resource):
+    neo4j_method = Neo4jClient()
+
+    def post(self, label):
+        """
+        bulk add the relationship between the two node
+        Usage: used for adding user to the project
+        """
+        post_data = request.get_json()
+        payload = post_data['payload']
+        pamras_location = post_data['pamras_location']
+        start_label = post_data['start_label']
+        end_label = post_data['end_label']
+
+        data = []
+
+        try:
+            if len(pamras_location) == 1:
+                if pamras_location[0] == 'end':
+                    for item in payload:
+                        params_data = tuple()
+                        params_key = (end_label,)
+
+                        end_params = item["end_params"]
+                        for key, value in end_params.items():
+                            params_key += (key, )
+                            params_data += (value, )
+
+                        if len(params_data) == 1:
+                            params_data = params_data[0]
+
+                        data.append((item['start_id'], {}, params_data))
+
+                    res = self.neo4j_method.bulk_add_relation_between_nodes(
+                        label, data, None, params_key)
+
+                else:
+                    for item in payload:
+                        params_data = tuple()
+                        params_key = (start_label, )
+
+                        start_params = item["start_params"]
+                        for key, value in start_params.items():
+                            params_key += (key, )
+                            params_data += (value, )
+
+                        if len(params_data) == 1:
+                            params_data = params_data[0]
+
+                        data.append((item['start_id'], {}, params_data))
+
+                    res = self.neo4j_method.bulk_add_relation_between_nodes(
+                        label, data, start_params, None)
+            else:
+                for item in payload:
+                    end_params_data = tuple()
+                    end_params_keys = (end_label,)
+
+                    start_params_data = tuple()
+                    start_params_keys = (start_label, )
+
+                    end_params = item["end_params"]
+                    for key, value in end_params.items():
+                        end_params_keys += (key, )
+                        end_params_data += (value, )
+
+                    start_params = item["start_params"]
+                    for key, value in start_params.items():
+                        start_params_keys += (key, )
+                        start_params_data += (value, )
+
+                    if len(start_params_data) == 1:
+                        start_params_data = start_params_data[0]
+
+                    if len(end_params_data) == 1:
+                        end_params_data = end_params_data[0]
+                    data.append((start_params_data, {}, end_params_data))
+
+                res = self.neo4j_method.bulk_add_relation_between_nodes(
+                    label, data, start_params_keys, end_params_keys)
+
+        except Exception as e:
+            return str(e), 403
+
+        return {"result": "success"}, 200
+
+
 class RelationshipActions(Resource):
     neo4j_method = Neo4jClient()
 
@@ -59,11 +146,11 @@ class RelationshipActions(Resource):
         properties = post_data.get('properties', {})
         if not start_id or not end_id or not new_label:
             return 'start_id, new_label and end_id are required', 403
-        
+
         # also if new and old are the same
         if label == new_label and not properties:
             return 'success', 200
-            
+
         # make the label between node to node
         try:
             res = self.neo4j_method.update_relation(
@@ -98,9 +185,9 @@ class RelationshipActionsLabelOption(Resource):
     # the start id and end id will be in the query string
     @relationship_ns.response(200, get_return)
     @relationship_ns.response(403, 'Exception')
-    @relationship_ns.doc(params={"params":"{'start_id': 'start node id (User)', "
-                                          "'end_id': 'end node id (Container)', "
-                                          "'label': 'relation label (admin/contributor)'}"})
+    @relationship_ns.doc(params={"params": "{'start_id': 'start node id (User)', "
+                                 "'end_id': 'end node id (Container)', "
+                                 "'label': 'relation label (admin/contributor)'}"})
     def get(self):
         """
         Get the relationship between the two node if exist by label
@@ -123,7 +210,8 @@ class RelationshipActionsLabelOption(Resource):
             for i in result:
                 type = next(iter(i.types()))
             if result:
-                result = [{'p': path_2_json(result[0]), 'r': {"type": type, "status": result[0].get("status")}}]
+                result = [{'p': path_2_json(result[0]), 'r': {
+                    "type": type, "status": result[0].get("status")}}]
 
         except Exception as e:
             return str(e), 403
@@ -158,7 +246,6 @@ class RelationshipActionsLabelOption(Resource):
 
 class ActionOnNodeByRelationships(Resource):
     neo4j_method = Neo4jRelationship()
-
 
     get_return = """
     [
@@ -289,12 +376,12 @@ class ActionOnRelationshipByQuery(Resource):
         # then call the function to see if we can get the infomation
         try:
             res = self.neo4j_method.get_relation_with_params(
-                label, 
-                start_label, 
-                end_label, 
-                start_params, 
-                end_params, 
-                partial=partial, 
+                label,
+                start_label,
+                end_label,
+                start_params,
+                end_params,
+                partial=partial,
                 page_kwargs=page_kwargs,
                 extra_query=extra_query,
                 sort_node=sort_node,
@@ -319,13 +406,13 @@ class CountActionOnRelationshipByQuery(Resource):
         "count": fields.Boolean(readOnly=True, description='number of records'),
         "partial": fields.Boolean(readOnly=True, description='whether enable partial search'),
         "start_label": fields.String(readOnly=True,
-                                         description="Label of start node, normally use 'User'"),
+                                     description="Label of start node, normally use 'User'"),
         "end_label": fields.String(readOnly=True,
-                                          description="Label of end node, normally use 'Container'"),
+                                   description="Label of end node, normally use 'Container'"),
         'start_params': fields.Raw(readOnly=True,
-                                        description="start_node(User) attributes, such as {'name': <user-name>} or {'email': <user-email>}"),
+                                   description="start_node(User) attributes, such as {'name': <user-name>} or {'email': <user-email>}"),
         'end_params': fields.Raw(readOnly=True,
-                                      description="end_node(Container) attributes, such as {'code': <project-code>}")
+                                 description="end_node(Container) attributes, such as {'code': <project-code>}")
     })
 
     @relationship_ns.expect(relation_query_module_count)
@@ -366,7 +453,6 @@ class RelationshipQueryV2(Resource):
         even those two node are not connected
         '''
 
-
         post_data = request.get_json()
         start_label = post_data.get("start_label", None)
         end_labels = post_data.get("end_labels", None)
@@ -378,10 +464,11 @@ class RelationshipQueryV2(Resource):
             "order_type": post_data.get("order_type"),
         }
         if not query.get("start_params"):
-            return "start_params required", 400 
+            return "start_params required", 400
         result = []
         try:
-            res, total = self.client.relation_query_multiple_labels(start_label, end_labels, query_params=query, page_kwargs=page_kwargs)
+            res, total = self.client.relation_query_multiple_labels(
+                start_label, end_labels, query_params=query, page_kwargs=page_kwargs)
             for x in res:
                 result.append(neo4j_obj_2_json(x)["end_node"])
         except Exception as e:
@@ -390,7 +477,8 @@ class RelationshipQueryV2(Resource):
             "results": result,
             "total": total,
         }
-        return response 
+        return response
+
 
 class RelationConnected(Resource):
     client = Neo4jRelationship()
@@ -481,7 +569,8 @@ class RelationConnected(Resource):
         try:
             relation = request.args.get('relation', 'own')
             direction = request.args.get('direction', 'input')
-            res = self.client.get_connected_nodes(geid, relation=relation, direction=direction)
+            res = self.client.get_connected_nodes(
+                geid, relation=relation, direction=direction)
             result = []
             for x in res:
                 result.append(neo4j_obj_2_json(x)["node"])

@@ -11,6 +11,7 @@ from config import ConfigClass
 from utils import neo4j_obj_2_json, path_2_json, node_2_json
 from services.logger_services.logger_factory_service import SrvLoggerFactory
 from py2neo import Graph, Node, Relationship
+from py2neo.bulk import create_nodes, create_relationships
 from py2neo.matching import RelationshipMatcher, NodeMatcher, CONTAINS, LIKE, OR, IN
 import neotime
 import ast
@@ -33,6 +34,14 @@ class Neo4jClient(object):
         except Exception as e:
             self._logger.error(
                 "Error in __init__ connecting to Neo4j:" + str(e))
+
+    def bulk_add_node(self, label, data, extra_labels=[]):
+        if extra_labels and len(extra_labels) > 0:
+            extra_labels = set(extra_labels)
+            extra_labels.add(label)
+        result = create_nodes(self.graph.auto(), data, labels=extra_labels)
+
+        return result
 
     def add_node(self, label, name, param={}):
         if label[0].isnumeric():
@@ -71,8 +80,11 @@ class Neo4jClient(object):
         # return self.graph.nodes.get(id)
 
     def get_node_by_geid(self, geid):
-        return self.graph.nodes.match(**{"global_entity_id":geid}).first()
+        return self.graph.nodes.match(**{"global_entity_id": geid}).first()
         # return self.graph.nodes.get(id)
+
+    def query_by_geid_bulk(self, geids):
+        return self.graph.nodes.match().where(**{"global_entity_id": IN(geids)})
 
     # in order to facilitate the query in the frontend
     # we provide all the possible key with value with it
@@ -202,6 +214,24 @@ class Neo4jClient(object):
             return self.relationships.match((start_node, end_node), r_type=relation_label).all()
         else:
             return self.relationships.match((start_node, end_node)).all()
+
+    def bulk_add_relation_between_nodes(self, relation_label, data, start_params_key=None, end_params_key=None):
+        if start_params_key and not end_params_key:
+            result = create_relationships(
+                self.graph.auto(), data, relation_label, start_node_key=start_params_key)
+            return result
+        if end_params_key and not start_params_key:
+            result = create_relationships(
+                self.graph.auto(), data, relation_label, end_node_key=end_params_key)
+            return result
+        if end_params_key and start_params_key:
+            result = create_relationships(
+                self.graph.auto(), data, relation_label, end_node_key=end_params_key, start_node_key=start_params_key)
+            return result
+        if not end_params_key and not start_params_key:
+            result = create_relationships(
+                self.graph.auto(), data, relation_label)
+            return result
 
     def add_relation_between_nodes(self, relation_label, start_id, end_id, properties={}):
         if type(start_id) == list and type(end_id) == list:

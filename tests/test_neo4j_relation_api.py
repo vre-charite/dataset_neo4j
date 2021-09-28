@@ -14,6 +14,16 @@ def skipIfTrue(flag):
         return wrapper
     return deco
 
+default_project_code = "utest"
+
+def setUpModule():
+    _log = Logger(name='test_user_dataset_neo4j_relation_api.log')
+    _test = SetUpTest(_log)
+    project_details = _test.get_project_details(default_project_code)
+    if len(project_details) > 0:
+        project_id = _test.get_project_details(default_project_code)[0].get('id')
+        _log.info(f'Existing project_id: {project_id}')
+        _test.delete_node(project_id, "Container")
 
 #@unittest.skip('not used for now')
 class TestNeo4jDatasetUserRelation(unittest.TestCase):

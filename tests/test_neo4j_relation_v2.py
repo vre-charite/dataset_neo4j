@@ -3,6 +3,17 @@ from tests.prepare_test import SetUpTest
 from tests.logger import Logger
 import json
 
+default_project_code = "neo4j_unit_test"
+
+def setUpModule():
+    _log = Logger(name='test_relation_v2.log')
+    _test = SetUpTest(_log)
+    project_details = _test.get_project_details(default_project_code)
+    if len(project_details) > 0:
+        project_id = _test.get_project_details(default_project_code)[0].get('id')
+        _log.info(f'Existing project_id: {project_id}')
+        _test.delete_node(project_id, "Container")
+
 @unittest.skip("need update")
 class TestRelationQueryV2(unittest.TestCase):
     log = Logger(name='test_relation_v2.log')

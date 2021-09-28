@@ -105,10 +105,10 @@ class SetUpTest:
         response = res.json[0]
         # Retrieve current node information by ID
         self.log.info(f"Create node response {response}")
-        if response.status_code != 200:
-            self.log.error(f"create_node request failed : {response.text}")
+        if res.status_code != 200:
+            self.log.error(f"create_node request failed : {res.get_json()}")
         else:
-            self.log.info(f"create_node request succeed : {response.text}")
+            self.log.info(f"create_node request succeed : {res}")
         res_creation = self.app.get("/v1/neo4j/nodes/%s/node/%d" % (label, response.get('id', None)))
         assert res_creation.status_code == 200
         self.log.info(f"TESTING NODE {label} CREATED WITH ATTRIBUTES {attribute}")
@@ -134,3 +134,15 @@ class SetUpTest:
         response = self.app.get("/v1/neo4j/nodes/%s/node/%d" % (label, node_id))
         content = response.data
         self.log.info(f'The testing node {node_id} has been deleted, record: {content}"')
+
+    def get_project_details(self, project_code):
+        try:
+            url = "/v1/neo4j/nodes/Container/query"
+            response = self.app.post(url, json={"code":project_code})
+            if response.status_code == 200:
+                response = response.json
+                self.log.info(f"POST RESPONSE: {response}")
+                return response
+        except Exception as error:
+            self.log.info(f"ERROR WHILE GETTING PROJECT: {error}")
+            raise error

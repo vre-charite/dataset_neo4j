@@ -47,16 +47,20 @@ from .neo4j_node_api import (
 	ActionOnNodeById, 
 	ActionOnNodeByGeid,
 	CreateNode, 
+    BatchCreateNode,
 	ActionOnNodeByQuery, 
 	CountActionOnNodeByQuery, 
 	ActionOnProperty,
     ChangeLabels,
     NodeQueryAPI,
 	NodeQuickCountAPI,
-	FileQuickCountAPI
+	FileQuickCountAPI,
+	BatchUpdate,
+    QueryByGeidBulk,
 )
 from .neo4j_relation_api import (
 	RelationshipActions, 
+ 	BatchRelationshipActions,
 	RelationshipActionsLabelOption, 
 	ActionOnRelationshipByQuery,
 	CountActionOnRelationshipByQuery,
@@ -69,16 +73,19 @@ from .neo4j_relation_api import (
 node_ns.add_resource(ActionOnNodeById, '/v1/neo4j/nodes/<label>/node/<id>')
 node_ns.add_resource(ActionOnNodeByGeid, '/v1/neo4j/nodes/geid/<geid>')
 node_ns.add_resource(CreateNode, '/v1/neo4j/nodes/<label>')
+node_ns.add_resource(BatchCreateNode, '/v1/neo4j/nodes/<label>/batch')
 node_ns.add_resource(ActionOnNodeByQuery, '/v1/neo4j/nodes/<label>/query')
 node_ns.add_resource(CountActionOnNodeByQuery, '/v1/neo4j/nodes/<label>/query/count')
 node_ns.add_resource(NodeQueryAPI, '/v2/neo4j/nodes/query')
 node_ns.add_resource(NodeQuickCountAPI, '/v1/neo4j/nodes/quick/count')
 node_ns.add_resource(FileQuickCountAPI, '/v1/neo4j/file/quick/count')
-
+node_ns.add_resource(BatchUpdate,'/v1/neo4j/nodes/<node_property>/batch/update')
 node_ns.add_resource(ActionOnProperty, '/v1/neo4j/nodes/<label>/properties')
 node_ns.add_resource(ChangeLabels, '/v1/neo4j/nodes/<id>/labels')
+node_ns.add_resource(QueryByGeidBulk, '/v1/neo4j/nodes/query/geids')
 
 relationship_ns.add_resource(RelationshipActions, '/v1/neo4j/relations/<label>')
+relationship_ns.add_resource(BatchRelationshipActions, '/v1/neo4j/relations/<label>/batch')
 relationship_ns.add_resource(RelationshipActionsLabelOption, '/v1/neo4j/relations')
 
 relationship_ns.add_resource(ActionOnRelationshipByQuery, '/v1/neo4j/relations/query')

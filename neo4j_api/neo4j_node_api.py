@@ -1,13 +1,13 @@
 from flask import request, make_response, jsonify
 # from flask_restful import Resource
 from flask_restx import Api, Resource
-
+from . import neo4j_connection
 from neo4j_api.neo4j_base import Neo4jNode, Neo4jClient, neo_quick_query
 from utils import neo4j_obj_2_json, node_2_json
 from . import node_ns
 from neo4j_api.swagger_modules import (
     node_update_module, node_create_module,
-    node_query_module, node_query_module_count, labels_module, node_query_module_v2)
+    node_query_module, node_query_module_count, labels_module, node_query_module_v2, node_batch_update)
 import math
 import json
 
@@ -85,7 +85,6 @@ class ActionOnNodeById(Resource):
 
         return result, 200
 
-
     put_returns = """
         Container response:
         [
@@ -150,8 +149,9 @@ class ActionOnNodeById(Resource):
         post_data = request.get_json()
 
         try:
-            if len(post_data.keys()) == 1 and  "last_login" in post_data.keys():
-                res = self.node_method.update_node(label, int(id), post_data, update_modified_time=False)
+            if len(post_data.keys()) == 1 and "last_login" in post_data.keys():
+                res = self.node_method.update_node(label, int(
+                    id), post_data, update_modified_time=False)
             else:
                 res = self.node_method.update_node(label, int(id), post_data)
             result = [node_2_json(res)]
@@ -243,6 +243,27 @@ class ActionOnNodeByGeid(Resource):
             return str(e), 403
 
         return result, 200
+
+
+class BatchCreateNode(Resource):
+    node_method = Neo4jClient()
+
+    def post(self, label):
+        """
+        Create New Node with Given Label
+        Usage: used for creating new user or new project
+        """
+        post_data = request.get_json()
+        payload = post_data['payload']
+        extra_labels = post_data.get('extra_labels', [])
+
+        # try:
+        #     res = self.node_method.bulk_add_node(label, payload, extra_labels)
+        #     # res
+        # except Exception as e:
+        #     return str(e), 403
+        res = self.node_method.bulk_add_node(label, payload, extra_labels)
+        return {"result": "success"}, 200
 
 
 class CreateNode(Resource):
@@ -381,16 +402,16 @@ class ActionOnNodeByQuery(Resource):
                 partial = post_data["partial"]
                 del post_data["partial"]
             if "limit" in post_data:
-                limit = post_data["limit"] 
+                limit = post_data["limit"]
                 del post_data["limit"]
             if "skip" in post_data:
-                skip = post_data["skip"] 
+                skip = post_data["skip"]
                 del post_data["skip"]
             if "order_by" in post_data:
-                order_by = post_data["order_by"] 
+                order_by = post_data["order_by"]
                 del post_data["order_by"]
             if "order_type" in post_data:
-                order_type = post_data["order_type"] 
+                order_type = post_data["order_type"]
                 del post_data["order_type"]
             if "is_all" in post_data:
                 is_all = post_data["is_all"]
@@ -399,19 +420,19 @@ class ActionOnNodeByQuery(Resource):
             nodes = []
             if is_all:
                 nodes = self.node_method.query_node(
-                    label, 
-                    post_data, 
-                    partial=partial, 
+                    label,
+                    post_data,
+                    partial=partial,
                     order_by=order_by,
                     order_type=order_type
                 )
             else:
                 nodes = self.node_method.query_node(
-                    label, 
-                    post_data, 
-                    limit=limit, 
-                    skip=skip, 
-                    partial=partial, 
+                    label,
+                    post_data,
+                    limit=limit,
+                    skip=skip,
+                    partial=partial,
                     order_by=order_by,
                     order_type=order_type
                 )
@@ -448,7 +469,8 @@ class CountActionOnNodeByQuery(Resource):
             del post_data["partial"]
 
         try:
-            res = self.node_method.query_node(label, post_data, count=True, partial=partial)
+            res = self.node_method.query_node(
+                label, post_data, count=True, partial=partial)
         except Exception as e:
             return str(e), 403
 
@@ -504,7 +526,7 @@ class ActionOnProperty(Resource):
             for x in res:
                 temp = dict(x)
                 result.update({temp["key"]: temp["options"]})
-            
+
             # pop out the time type
             result.pop("time_lastmodified", None)
             result.pop("time_created", None)
@@ -532,6 +554,7 @@ class ChangeLabels(Resource):
         }
     ])
     """
+
     @node_ns.expect(labels_module)
     @node_ns.response(200, put_returns)
     @node_ns.response(403, """Exception""")
@@ -602,14 +625,15 @@ class NodeQueryAPI(Resource):
         try:
             nodes = self.node_method.query_node(
                 labels,
-                query, 
-                limit=limit, 
-                skip=skip, 
-                partial=partial, 
+                query,
+                limit=limit,
+                skip=skip,
+                partial=partial,
                 order_by=order_by,
                 order_type=order_type
             )
-            total = self.node_method.query_node(labels, query, count=True, partial=partial)
+            total = self.node_method.query_node(
+                labels, query, count=True, partial=partial)
             result = [node_2_json(x) for x in nodes]
         except Exception as e:
             return str(e), 403
@@ -623,6 +647,7 @@ class NodeQueryAPI(Resource):
         }
         return response, 200
 
+
 class NodeQuickCountAPI(Resource):
     node_method = Neo4jNode()
     get_return = """
@@ -631,6 +656,7 @@ class NodeQuickCountAPI(Resource):
         ]
     }
     """
+
     @node_ns.doc(params={
         'labels': 'Greenroom:File',
         'other_args': '[str] or [bool] or [int]'})
@@ -642,11 +668,11 @@ class NodeQuickCountAPI(Resource):
         try:
             labels = request.args.get('labels', None)
             if not labels:
-                    return "labels is required", 404
+                return "labels is required", 404
             # get query params
             query_params_kwargs = {}
             for arg_key in request.args:
-                if not arg_key=='labels':
+                if not arg_key == 'labels':
                     query_params_kwargs[arg_key] = request.args[arg_key]
             where_condition = ""
             if query_params_kwargs:
@@ -656,12 +682,13 @@ class NodeQuickCountAPI(Resource):
                     if val.startswith('[int]'):
                         return val.replace('[int]', '')
                     return '"{}"'.format(val)
-                where_condition = " and ".join(['n.{}={}'.format(key, convert_value(query_params_kwargs[key])) \
-                    for key in query_params_kwargs])
+
+                where_condition = " and ".join(['n.{}={}'.format(key, convert_value(query_params_kwargs[key]))
+                                                for key in query_params_kwargs])
             query = 'MATCH (n:{}) '.format(labels)
             if where_condition:
-                query+=" where {}".format(where_condition)
-            query+=" RETURN count(n) as count"
+                query += " where {}".format(where_condition)
+            query += " RETURN count(n) as count"
             print(query)
             res = neo_quick_query(query)
             for record in res:
@@ -671,6 +698,7 @@ class NodeQuickCountAPI(Resource):
             print(e)
             return str(e), 403
 
+
 class FileQuickCountAPI(Resource):
     node_method = Neo4jNode()
     get_return = """
@@ -679,6 +707,7 @@ class FileQuickCountAPI(Resource):
         ]
     }
     """
+
     @node_ns.doc(params={
         'labels': 'Greenroom:File',
         'other_args': '[str] or [bool] or [int]'})
@@ -690,11 +719,11 @@ class FileQuickCountAPI(Resource):
         try:
             labels = request.args.get('labels', None)
             if not labels:
-                    return "labels is required", 404
+                return "labels is required", 404
             # get query params
             query_params_kwargs = {}
             for arg_key in request.args:
-                if arg_key!='labels' and arg_key!='startwith' :
+                if arg_key != 'labels' and arg_key != 'startwith':
                     query_params_kwargs[arg_key] = request.args[arg_key]
             project_code = "{}".format(query_params_kwargs['project_code'])
             del query_params_kwargs['project_code']
@@ -707,16 +736,20 @@ class FileQuickCountAPI(Resource):
                     if val.startswith('[int]'):
                         return val.replace('[int]', '')
                     return '"{}"'.format(val)
+
                 def condition_generator(key, value):
                     operator = " STARTS WITH " if key in startwith else "="
-                    generated = 'n.{}{}{}'.format(key, operator, convert_value(value))
+                    generated = 'n.{}{}{}'.format(
+                        key, operator, convert_value(value))
                     return generated
-                where_condition = " and ".join([condition_generator(key, query_params_kwargs[key]) \
-                    for key in query_params_kwargs])
-            query = 'MATCH (n:{}) <-[r:own*]-(p:Container) where p.code="{}"'.format(labels, project_code)
+
+                where_condition = " and ".join([condition_generator(key, query_params_kwargs[key])
+                                                for key in query_params_kwargs])
+            query = 'MATCH (n:{}) <-[r:own*]-(p:Container) where p.code="{}"'.format(
+                labels, project_code)
             if where_condition:
-                query+=" and {}".format(where_condition)
-            query+=" RETURN count(n) as count"
+                query += " and {}".format(where_condition)
+            query += " RETURN count(n) as count"
             print(query)
             res = neo_quick_query(query)
             for record in res:
@@ -725,3 +758,54 @@ class FileQuickCountAPI(Resource):
         except Exception as e:
             print(e)
             return str(e), 403
+
+
+class BatchUpdate(Resource):
+    """This API helps batch update of labels for listed nodes based on geid"""
+    response = """"{
+        "result":
+        [{'id': 49, 'labels': ['Folder', 'VRECore'], 'global_entity_id': '6785869f-b017-4ed3-b602-a4ce7e8dcda2-1621605134', 'display_path': 'admin/test_copy_rename_36/testzy3/test_dest/test_copy_rename_56/testzyparent_34', 'project_code': 'test0511', 'tags': ['test_bulk123'], 'folder_level': 2, 'archived': False, 'list_priority': 10, 'folder_relative_path': 'admin/test_copy_rename_36/testzy3/test_dest/test_copy_rename_56', 'time_lastmodified': '2021-06-01T13:13:09', 'uploader': 'admin', 'system_tags': ['copied-to-core'], 'name': 'testzyparent_34', 'time_created': '2021-05-21T13:52:14'}]
+        }"""
+
+    @node_ns.response(200, response)
+    @node_ns.expect(node_batch_update)
+    def put(self, node_property):
+        try:
+            post_data = request.get_json()
+            data = post_data.get('data')
+
+            query = f'UNWIND $data as p ' \
+                    f'MATCH (n) where n.global_entity_id = p.global_entity_id SET n.{node_property} = p.{node_property} return n'
+            neo4j_session = neo4j_connection.session()
+            res = neo4j_session.run(query, data=data)
+            result = [neo4j_obj_2_json(x).get('n') for x in res]
+            return {"result": result}, 200
+        except Exception as error:
+            return str(error), 403
+
+class QueryByGeidBulk(Resource):
+    node_method = Neo4jClient()
+    
+    def post(self):
+        data = request.get_json()
+        geids = data.pop("geids", [])
+        if not geids:
+            return "geids parameter is required", 400
+
+        try:
+            nodes = self.node_method.query_by_geid_bulk(geids)
+            total = len(nodes)
+            result = [node_2_json(x) for x in nodes]
+        except Exception as e:
+            return "Error running neo4j query: " + str(e), 500
+
+        response = {
+            'code': 200,
+            'error_msg': '',
+            'result': result,
+            'page': 0,
+            'total': total,
+            'num_of_pages': 1,
+        }
+        return response, 200
+

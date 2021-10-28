@@ -32,7 +32,7 @@ dev-build:
       - k8s-dev
   script:
     - docker login ${REGISTRY_DEV} -u ${DOCKER_USER} -p ${DOCKER_PASSWORD}
-    - docker build -t ${CONTAINER_IMAGE_DEV} .
+    - docker build --build-arg http_proxy=http://proxy.charite.de:8080/ --build-arg https_proxy=http://proxy.charite.de:8080/ -t ${CONTAINER_IMAGE_DEV} .
     - docker push ${CONTAINER_IMAGE_DEV}
 
 dev-deploy:
@@ -58,7 +58,7 @@ staging-build:
       - k8s-staging
   script:
     - docker login ${REGISTRY_STAGING} -u ${DOCKER_USER} -p ${DOCKER_PASSWORD}
-    - docker build -t ${CONTAINER_IMAGE_STAGING} .
+    - docker build --build-arg http_proxy=http://proxy.charite.de:8080/ --build-arg https_proxy=http://proxy.charite.de:8080/ -t ${CONTAINER_IMAGE_STAGING} .
     - docker push ${CONTAINER_IMAGE_STAGING}
 
 staging-deploy:
@@ -73,4 +73,3 @@ staging-deploy:
     - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" kubernetes/staging-deployment.yaml
     - kubectl config use-context staging
     - kubectl apply -f kubernetes/staging-deployment.yaml
-

@@ -1,7 +1,8 @@
 from app import create_app
+from config import get_settings
 
 app = create_app()
 
-# add to https
 if __name__ == '__main__':
-	app.run(host='0.0.0.0', port=5062, debug=True)
+    settings = get_settings()
+    app.run(host=settings.HOST, port=settings.PORT, debug=settings.DEBUG)

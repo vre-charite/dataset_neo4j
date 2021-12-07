@@ -63,6 +63,8 @@ def path_2_json(obj):
             start_node["name"])["children"]
 
         end_node = node_2_json(r.end_node)
+        if not end_node.get("name"):
+            continue
         temp = current_node_tree.get(end_node["name"], None)
         if not temp:
             # print("##########################")

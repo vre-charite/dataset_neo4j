@@ -809,3 +809,22 @@ class QueryByGeidBulk(Resource):
         }
         return response, 200
 
+
+class BulkUpdate(Resource):
+    node_method = Neo4jClient()
+
+    # https://py2neo.org/2021.1/bulk/index.html?highlight=bulk#py2neo.bulk.create_nodes
+    def put(self):
+        put_data = request.get_json()
+        data = put_data.get("data")
+        merge_key = put_data.get("merge_key")
+        if not data or not merge_key:
+            return {"error_msg": "Missing required parameter"}, 400
+
+        merge_key = tuple(merge_key)
+
+        try:
+            self.node_method.bulk_update_nodes(data, merge_key)
+        except Exception as e:
+            return {"error_msg": "Error running neo4j query: " + str(e)}, 500
+        return {"result": "success"}, 200

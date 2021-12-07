@@ -11,7 +11,7 @@ from config import ConfigClass
 from utils import neo4j_obj_2_json, path_2_json, node_2_json
 from services.logger_services.logger_factory_service import SrvLoggerFactory
 from py2neo import Graph, Node, Relationship
-from py2neo.bulk import create_nodes, create_relationships
+from py2neo.bulk import create_nodes, create_relationships, merge_nodes
 from py2neo.matching import RelationshipMatcher, NodeMatcher, CONTAINS, LIKE, OR, IN
 import neotime
 import ast
@@ -39,9 +39,20 @@ class Neo4jClient(object):
         if extra_labels and len(extra_labels) > 0:
             extra_labels = set(extra_labels)
             extra_labels.add(label)
+
+        # new add attribute here to add time_create&time_modified
+        for node in data:
+            node.update({
+                "time_created": neotime.DateTime.utc_now(),
+                "time_lastmodified": neotime.DateTime.utc_now(),
+            })
+
         result = create_nodes(self.graph.auto(), data, labels=extra_labels)
 
         return result
+
+    def bulk_update_nodes(self, data, merge_key):
+        merge_nodes(self.graph.auto(), data, merge_key)
 
     def add_node(self, label, name, param={}):
         if label[0].isnumeric():
@@ -514,6 +525,7 @@ class Neo4jRelationship(object):
             limit = page_kwargs["limit"]
             neo_query += f' LIMIT {limit}'
         neo4j_session = neo4j_connection.session()
+        print(neo_query, neo_params)
         result = neo4j_session.run(neo_query, **neo_params)
         return result, total
 

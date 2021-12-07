@@ -57,6 +57,7 @@ from .neo4j_node_api import (
 	FileQuickCountAPI,
 	BatchUpdate,
     QueryByGeidBulk,
+    BulkUpdate,
 )
 from .neo4j_relation_api import (
 	RelationshipActions, 
@@ -83,6 +84,7 @@ node_ns.add_resource(BatchUpdate,'/v1/neo4j/nodes/<node_property>/batch/update')
 node_ns.add_resource(ActionOnProperty, '/v1/neo4j/nodes/<label>/properties')
 node_ns.add_resource(ChangeLabels, '/v1/neo4j/nodes/<id>/labels')
 node_ns.add_resource(QueryByGeidBulk, '/v1/neo4j/nodes/query/geids')
+node_ns.add_resource(BulkUpdate, '/v2/neo4j/nodes/batch/update')
 
 relationship_ns.add_resource(RelationshipActions, '/v1/neo4j/relations/<label>')
 relationship_ns.add_resource(BatchRelationshipActions, '/v1/neo4j/relations/<label>/batch')

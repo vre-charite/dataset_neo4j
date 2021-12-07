@@ -18,15 +18,15 @@ class BatchRelationshipActions(Resource):
         """
         post_data = request.get_json()
         payload = post_data['payload']
-        pamras_location = post_data['pamras_location']
+        params_location = post_data['params_location']
         start_label = post_data['start_label']
         end_label = post_data['end_label']
 
         data = []
 
         try:
-            if len(pamras_location) == 1:
-                if pamras_location[0] == 'end':
+            if len(params_location) == 1:
+                if params_location[0] == 'end':
                     for item in payload:
                         params_data = tuple()
                         params_key = (end_label,)

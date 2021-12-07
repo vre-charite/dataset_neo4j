@@ -31,16 +31,10 @@ spec:
           env:
           - name: env
             value: "charite"
-          - name: NEO4J_USER
-            valueFrom:
-              secretKeyRef:
-                name: neo4j-db
-                key: username
-          - name: NEO4J_PASS
-            valueFrom:
-              secretKeyRef:
-                name: neo4j-db
-                key: password
+          - name: CONFIG_CENTER_ENABLED
+            value: "true"
+          - name: CONFIG_CENTER_BASE_URL
+            value: "http://common.utility:5062/"
           readinessProbe:
             tcpSocket:
               port: 5062

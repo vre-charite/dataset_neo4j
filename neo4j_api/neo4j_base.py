@@ -154,6 +154,8 @@ class Neo4jClient(object):
                     query_params[key] = LIKE(f"(?i)(?s)(?m).*{value}.*")
                 else:
                     query_params[key] = LIKE(f"(?i)(?s)(?m){value}")
+            elif key == "location":
+                query_params[key] = value
             elif key == "full_path" and not partial:
                 query_params[key] = value
             elif key == "status" and isinstance(value, list):

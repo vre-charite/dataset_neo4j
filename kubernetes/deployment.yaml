@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
         - name: neo4j
-          image: 10.32.42.225:5000/neo4j:<VERSION>
+          image: s-hdp-vre-v007.charite.de/neo4j:<VERSION>
           ports:
             - containerPort: 5062
           env:

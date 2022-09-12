@@ -1,3 +1,23 @@
+# Copyright 2022 Indoc Research
+# 
+# Licensed under the EUPL, Version 1.2 or – as soon they
+# will be approved by the European Commission - subsequent
+# versions of the EUPL (the "Licence");
+# You may not use this work except in compliance with the
+# Licence.
+# You may obtain a copy of the Licence at:
+# 
+# https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+# 
+# Unless required by applicable law or agreed to in
+# writing, software distributed under the Licence is
+# distributed on an "AS IS" basis,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied.
+# See the Licence for the specific language governing
+# permissions and limitations under the Licence.
+# 
+
 from flask import request, make_response, jsonify
 # from flask_restful import Resource
 from flask_restx import Api, Resource
@@ -17,7 +37,7 @@ class ActionOnNodeById(Resource):
     node_method = Neo4jClient()
 
     get_returns = """
-     Container response: 
+     Container response:
      [
         {'id': <Node-ID>,
          'labels': ['Container'],
@@ -25,9 +45,9 @@ class ActionOnNodeById(Resource):
          'is_new': False,
          'last_login': '2020-11-23T17:06:27.600313',
          'roles': [<project_enabled-roles>],
-         'description': <project-description>, 
-         'type': 'Usecase', 
-         'tags': [<project-tags>], 
+         'description': <project-description>,
+         'type': 'Usecase',
+         'tags': [<project-tags>],
          'path': <nfs-path>,
          'time_lastmodified': <time-string>,
          'discoverable': <whether-discoverable-to-all-users>,
@@ -45,7 +65,7 @@ class ActionOnNodeById(Resource):
          "name": <username>,
          "time_created": <time-string>,
          "last_name": <lastname>,
-         "realm": "vre",
+         "realm": "realm",
          "first_name": <firstname>,
          "email": <email>,
          "status": "active"}
@@ -115,7 +135,7 @@ class ActionOnNodeById(Resource):
             "name": <username>,
             "time_created": <time-string>,
             "last_name": <lastname>,
-            "realm": "vre",
+            "realm": "realm",
             "first_name": <firstname>,
             "email": <user-email>,
             "status": "active"
@@ -128,8 +148,8 @@ class ActionOnNodeById(Resource):
              "name": <node-name>,
              "time_created": <time-string>,
              "time_lastmodified": <time-string>,
-            
-            
+
+
              "other_property": "xxxx",
              "other_property_2": "xxxx",
              "new_attribute":"new_value"
@@ -162,7 +182,7 @@ class ActionOnNodeById(Resource):
 
     def delete(self, label, id):
         """
-        Delete node by label and id 
+        Delete node by label and id
         """
         try:
             self.node_method.delete_node(label, int(id))
@@ -176,7 +196,7 @@ class ActionOnNodeByGeid(Resource):
     node_method = Neo4jClient()
 
     get_returns = """
-     Container response: 
+     Container response:
      [
         {'id': <Node-ID>,
          'labels': ['Container'],
@@ -184,9 +204,9 @@ class ActionOnNodeByGeid(Resource):
          'is_new': False,
          'last_login': '2020-11-23T17:06:27.600313',
          'roles': [<project_enabled-roles>],
-         'description': <project-description>, 
-         'type': 'Usecase', 
-         'tags': [<project-tags>], 
+         'description': <project-description>,
+         'type': 'Usecase',
+         'tags': [<project-tags>],
          'path': <nfs-path>,
          'time_lastmodified': <time-string>,
          'discoverable': <whether-discoverable-to-all-users>,
@@ -204,7 +224,7 @@ class ActionOnNodeByGeid(Resource):
          "name": <username>,
          "time_created": <time-string>,
          "last_name": <lastname>,
-         "realm": "vre",
+         "realm": "realm",
          "first_name": <firstname>,
          "email": <email>,
          "status": "active"}
@@ -230,7 +250,7 @@ class ActionOnNodeByGeid(Resource):
     @node_ns.response(403, """Exception""")
     def get(self, geid):
         """
-        Get the Node with the input geid since now most operation 
+        Get the Node with the input geid since now most operation
         are use the geid
         """
         try:
@@ -311,7 +331,7 @@ class CreateNode(Resource):
         }
     }\n
     Default response:
-    {'id': <ID>, 
+    {'id': <ID>,
     'labels': ['test_label'],
     'name': <node-name>,
     "time_created": <time-string>,
@@ -482,7 +502,7 @@ class ActionOnProperty(Resource):
     node_method = Neo4jNode()
 
     get_returns = """
-    User response: 
+    User response:
     {"last_login": [<time-string>],
      "status": ["active", "disabled"],
      "email": [<email>],
@@ -491,7 +511,7 @@ class ActionOnProperty(Resource):
      "role": ["admin", "member"],
      "name": [<user-name>],
      "last_name": [<last-name>],
-     "realm": ["vre"]
+     "realm": ["realm"]
     }\n
     Container response:
     {"code": [<project-code>],
@@ -584,7 +604,7 @@ class ChangeLabels(Resource):
 class NodeQueryAPI(Resource):
     node_method = Neo4jClient()
     response = """
-    {   
+    {
     'code': 200,
     'error_msg': '',
     'num_of_pages': 33,
@@ -593,7 +613,7 @@ class NodeQueryAPI(Resource):
                       'description': 'description',
                       'file_size': 0,
                       'full_path': 'test/zy//testzy6',
-                      'generate_id': '',
+                      'dcm_id': '',
                       'guid': '083a7459-9a2f-4b4d-bfe5-c1d683e1103c',
                       'id': 59,
                       'labels': ['Greenroom', 'Raw', 'File'],
@@ -764,7 +784,7 @@ class BatchUpdate(Resource):
     """This API helps batch update of labels for listed nodes based on geid"""
     response = """"{
         "result":
-        [{'id': 49, 'labels': ['Folder', 'VRECore'], 'global_entity_id': '6785869f-b017-4ed3-b602-a4ce7e8dcda2-1621605134', 'display_path': 'admin/test_copy_rename_36/testzy3/test_dest/test_copy_rename_56/testzyparent_34', 'project_code': 'test0511', 'tags': ['test_bulk123'], 'folder_level': 2, 'archived': False, 'list_priority': 10, 'folder_relative_path': 'admin/test_copy_rename_36/testzy3/test_dest/test_copy_rename_56', 'time_lastmodified': '2021-06-01T13:13:09', 'uploader': 'admin', 'system_tags': ['copied-to-core'], 'name': 'testzyparent_34', 'time_created': '2021-05-21T13:52:14'}]
+        [{'id': 49, 'labels': ['Folder', 'Core'], 'global_entity_id': '6785869f-b017-4ed3-b602-a4ce7e8dcda2-1621605134', 'display_path': 'admin/test_copy_rename_36/testzy3/test_dest/test_copy_rename_56/testzyparent_34', 'project_code': 'test0511', 'tags': ['test_bulk123'], 'folder_level': 2, 'archived': False, 'list_priority': 10, 'folder_relative_path': 'admin/test_copy_rename_36/testzy3/test_dest/test_copy_rename_56', 'time_lastmodified': '2021-06-01T13:13:09', 'uploader': 'admin', 'system_tags': ['copied-to-core'], 'name': 'testzyparent_34', 'time_created': '2021-05-21T13:52:14'}]
         }"""
 
     @node_ns.response(200, response)
@@ -785,7 +805,7 @@ class BatchUpdate(Resource):
 
 class QueryByGeidBulk(Resource):
     node_method = Neo4jClient()
-    
+
     def post(self):
         data = request.get_json()
         geids = data.pop("geids", [])

@@ -1,3 +1,23 @@
+# Copyright 2022 Indoc Research
+# 
+# Licensed under the EUPL, Version 1.2 or – as soon they
+# will be approved by the European Commission - subsequent
+# versions of the EUPL (the "Licence");
+# You may not use this work except in compliance with the
+# Licence.
+# You may obtain a copy of the Licence at:
+# 
+# https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+# 
+# Unless required by applicable law or agreed to in
+# writing, software distributed under the Licence is
+# distributed on an "AS IS" basis,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied.
+# See the Licence for the specific language governing
+# permissions and limitations under the Licence.
+# 
+
 from flask import request, make_response, jsonify
 # from flask_restful import Resource
 from flask_restx import Api, Resource, fields
@@ -168,7 +188,7 @@ class RelationshipActionsLabelOption(Resource):
     [
         {"p": {
             <username>: {
-                        "id": <user-id>, 
+                        "id": <user-id>,
                         "children": {
                                 <projcet-name>: {
                                         "id": <project-id>,
@@ -269,8 +289,6 @@ class ActionOnNodeByRelationships(Resource):
     def get(self, label, id):
         """
         Get the nodes along the relationship
-        Git:
-        https://git.indocresearch.org/charite/core/blob/k8s-dev/portal/backend/api/api_dataset/dataset_operation_neo4j.py#L274
         """
         # get from the query
         start = request.args.get('start', True)
@@ -303,46 +321,46 @@ class ActionOnRelationshipByQuery(Resource):
     complex_query_return = """
     [
         {'end_node': {
-                'id': <node-id>, 
-                'labels': ['Container'], 
-                'path': <nfs-path>, 
-                'code': <project-code>, 
-                'time_lastmodified': <time-string>, 
-                'discoverable': True, 
-                'roles': [<project-role>], 
-                'name': <project-name>, 
+                'id': <node-id>,
+                'labels': ['Container'],
+                'path': <nfs-path>,
+                'code': <project-code>,
+                'time_lastmodified': <time-string>,
+                'discoverable': True,
+                'roles': [<project-role>],
+                'name': <project-name>,
                 'time_created': <time-string>,
-                'description: <project-description> 
-                'admin': ['admin'], 
+                'description: <project-description>
+                'admin': ['admin'],
                 'type': 'Usecase',
                 'tags': [<tags>]
-                        }, 
+                        },
          'p': {
                 'admin': {
                         'id': 0,
                         'children': {
                                 'NOV-1130-2': {
-                                        'id': 259, 
+                                        'id': 259,
                                         'children': {}
                                                 }
                                     }
                         }
-                }, 
+                },
          'r': {'type': <relation-label>},
          'start_node': {
                 'id': <node-id>,
                 'labels': ['User'],
                 'path': 'users',
                 'time_lastmodified': <time-string>,
-                'role': 'admin', 
-                'last_login': '2020-12-01T16:13:30.103658', 
-                'name': 'admin', 
-                'last_name': 'admin', 
-                'first_name': 'admin', 
-                'email': 'siteadmin.test@vre.com', 
+                'role': 'admin',
+                'last_login': '2020-12-01T16:13:30.103658',
+                'name': 'admin',
+                'last_name': 'admin',
+                'first_name': 'admin',
+                'email': 'siteadmin.test@domain.com',
                 'status': 'active'
                         }
-        }, 
+        },
     ]
     """
 

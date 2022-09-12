@@ -1,39 +1,63 @@
-import os
+# Copyright 2022 Indoc Research
+# 
+# Licensed under the EUPL, Version 1.2 or – as soon they
+# will be approved by the European Commission - subsequent
+# versions of the EUPL (the "Licence");
+# You may not use this work except in compliance with the
+# Licence.
+# You may obtain a copy of the Licence at:
+# 
+# https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+# 
+# Unless required by applicable law or agreed to in
+# writing, software distributed under the Licence is
+# distributed on an "AS IS" basis,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied.
+# See the Licence for the specific language governing
+# permissions and limitations under the Licence.
+# 
+
 from functools import lru_cache
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Optional
 
-import requests
+from common import VaultClient
 from pydantic import BaseSettings
 from pydantic import Extra
-from requests.models import HTTPError
 
-SRV_NAMESPACE = os.environ.get('APP_NAME', 'dataset_neo4j')
-CONFIG_CENTER_ENABLED = os.environ.get('CONFIG_CENTER_ENABLED', 'false')
-CONFIG_CENTER_BASE_URL = os.environ.get('CONFIG_CENTER_BASE_URL', 'NOT_SET')
+
+class VaultConfig(BaseSettings):
+    """Store vault related configuration."""
+
+    APP_NAME: str = 'service_neo4j'
+    CONFIG_CENTER_ENABLED: bool = False
+
+    VAULT_URL: Optional[str]
+    VAULT_CRT: Optional[str]
+    VAULT_TOKEN: Optional[str]
+
+    class Config:
+        env_file = '.env'
+        env_file_encoding = 'utf-8'
 
 
 def load_vault_settings(settings: BaseSettings) -> Dict[str, Any]:
-    if CONFIG_CENTER_ENABLED == 'false':
+    config = VaultConfig()
+
+    if not config.CONFIG_CENTER_ENABLED:
         return {}
 
-    return vault_factory(CONFIG_CENTER_BASE_URL)
-
-
-def vault_factory(config_center: str) -> Dict[Any, Any]:
-    url = f'{config_center}/v1/utility/config/{SRV_NAMESPACE}'
-    config_center_response = requests.get(url)
-
-    if config_center_response.status_code != 200:
-        raise HTTPError(config_center_response.text)
-
-    return config_center_response.json()['result']
+    client = VaultClient(config.VAULT_URL, config.VAULT_CRT, config.VAULT_TOKEN)
+    return client.get_from_vault(config.APP_NAME)
 
 
 class Settings(BaseSettings):
     """Store service configuration settings."""
 
+    APP_NAME: str = 'service_neo4j'
     PORT: int = 5062
     HOST: str = '0.0.0.0'
     LOGLEVEL: str = 'info'
@@ -46,6 +70,9 @@ class Settings(BaseSettings):
     NEO4J_PASS: str
     DATA_OPS_UTIL: str
     API_MODULES: List[str] = ['neo4j_api']
+    OPEN_TELEMETRY_ENABLED: bool = False
+    OPEN_TELEMETRY_HOST: str = '127.0.0.1'
+    OPEN_TELEMETRY_PORT: int = 6831
 
     class Config:
         env_file = '.env'
@@ -54,22 +81,13 @@ class Settings(BaseSettings):
 
         @classmethod
         def customise_sources(cls, init_settings, env_settings, file_secret_settings):
-            return load_vault_settings, env_settings, init_settings, file_secret_settings
+            return env_settings, load_vault_settings, init_settings, file_secret_settings
 
 
 @lru_cache(1)
 def get_settings():
-    """Return service settings."""
-
     settings = Settings()
     return settings
 
 
-class ConfigClass:
-    settings = get_settings()
-    version = '0.1.0'
-    NEO4J_URL = settings.NEO4J_URL
-    NEO4J_USER = settings.NEO4J_USER
-    NEO4J_PASS = settings.NEO4J_PASS
-    DATAOPS = settings.DATA_OPS_UTIL
-    API_MODULES = settings.API_MODULES
+ConfigClass = get_settings()

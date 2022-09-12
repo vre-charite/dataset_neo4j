@@ -1,3 +1,23 @@
+# Copyright 2022 Indoc Research
+# 
+# Licensed under the EUPL, Version 1.2 or – as soon they
+# will be approved by the European Commission - subsequent
+# versions of the EUPL (the "Licence");
+# You may not use this work except in compliance with the
+# Licence.
+# You may obtain a copy of the Licence at:
+# 
+# https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+# 
+# Unless required by applicable law or agreed to in
+# writing, software distributed under the Licence is
+# distributed on an "AS IS" basis,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied.
+# See the Licence for the specific language governing
+# permissions and limitations under the Licence.
+# 
+
 #
 # so as the neo4j it requires the connection
 # as the mandetory parameter in the config file
@@ -18,7 +38,7 @@ for x in required_parameters:
 neo4j_connection = GraphDatabase.driver(ConfigClass.NEO4J_URL, 
 	auth=(ConfigClass.NEO4J_USER, ConfigClass.NEO4J_PASS),encrypted=False)
 
-page_description="Neo4j is the GraphDB modeling used in VRE project. " \
+page_description="Neo4j is the GraphDB modeling used in project. " \
 				 "As of the Release 0.2.0, there are 2 different types" \
 				 " of node that are used to model the projects, users, and the " \
 				 "relationships between them. " \
@@ -29,9 +49,6 @@ page_description="Neo4j is the GraphDB modeling used in VRE project. " \
 				 "that project node with the relationship to indicate hers role " \
 				 "in that project. \n\n" \
 				 "Some useful links: \n\n " \
-				 "Neo4j database(Indoc VPN required): http://10.3.7.219:7474/browser/ \n" \
-				 "Confluence specifications: https://indocconsortium.atlassian.net/wiki/spaces/VRE/pages/1417871393/GraphDB+Neo4j+Service+Specification' \n" \
-				 "Git repository: https://git.indocresearch.org/platform/dataset_neo4j \n" \
 				 "\n"
 
 module_api = Api(version='1.0', title='Neo4j API',

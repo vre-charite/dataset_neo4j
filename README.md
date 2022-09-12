@@ -1,3 +1,25 @@
+<!--
+ Copyright 2022 Indoc Research
+ 
+ Licensed under the EUPL, Version 1.2 or – as soon they
+ will be approved by the European Commission - subsequent
+ versions of the EUPL (the "Licence");
+ You may not use this work except in compliance with the
+ Licence.
+ You may obtain a copy of the Licence at:
+ 
+ https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ 
+ Unless required by applicable law or agreed to in
+ writing, software distributed under the Licence is
+ distributed on an "AS IS" basis,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ express or implied.
+ See the Licence for the specific language governing
+ permissions and limitations under the Licence.
+ 
+-->
+
 # Neo4j Api Service
 
 the service wrap up some basic neo4j query into API for further usage.
@@ -12,21 +34,26 @@ follow the step below to setup the service
 
 - Clone this repo to machine using `https://git.indocresearch.org/platform/dataset_neo4j.git`
 
-### Setup:
+### Prerequisites
 
-> To run the service as dev mode
+- [Poetry](https://python-poetry.org/) dependency manager.
+- Vault connection credentials or custom-set environment variables.
 
-```
-python3 -m pip install -r requirement.txt
-python3 app.py
-```
+### Installation
 
-> To run the service as production in docker and gunicorn
+1. Install [Poetry](https://python-poetry.org/docs/#installation).
+2. Configure access to internal package registry.
 
-```
-docker build . -t neo4j/latest
-docker run neo4j/latest -d
-```
+       poetry config http-basic.pilot ${PIP_USERNAME} ${PIP_PASSWORD}
+
+3. Install dependencies.
+
+       poetry install
+
+4. Add environment variables into `.env`.
+5. Run application.
+
+       poetry run python app.py
 
 ## Features:
 
@@ -34,25 +61,25 @@ the service uses the swagger to make the api documents: see the detailed [doc](l
 
 ### Node Related API:
 
- - Retrieve node by id
+- Retrieve node by id
 
- - Retrieve node by relationship
+- Retrieve node by relationship
 
- - Query node by input payload
+- Query node by input payload
 
- - Add new nodes
+- Add new nodes
 
- - Update nodes attributes
+- Update nodes attributes
 
- - Retrieve nodes beyond the relationship
+- Retrieve nodes beyond the relationship
 
 ### Relation Related API:
 
- - Retrive the relation between nodes
+- Retrive the relation between nodes
 
- - Add new relationship between nodes
+- Add new relationship between nodes
 
- - Update the relationship between nodes
+- Update the relationship between nodes
 
 
 

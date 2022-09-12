@@ -1,27 +1,54 @@
+# Copyright 2022 Indoc Research
+# 
+# Licensed under the EUPL, Version 1.2 or – as soon they
+# will be approved by the European Commission - subsequent
+# versions of the EUPL (the "Licence");
+# You may not use this work except in compliance with the
+# Licence.
+# You may obtain a copy of the Licence at:
+# 
+# https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+# 
+# Unless required by applicable law or agreed to in
+# writing, software distributed under the Licence is
+# distributed on an "AS IS" basis,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied.
+# See the Licence for the specific language governing
+# permissions and limitations under the Licence.
+# 
+
 #
 # this file is the basic operation on the neo4j includes
 # add the node and relationship to fullfill the basic
 # requirement on the neo4j
 #
 
-from datetime import datetime
-
-from . import neo4j_connection
-from config import ConfigClass
-from utils import neo4j_obj_2_json, path_2_json, node_2_json
-from services.logger_services.logger_factory_service import SrvLoggerFactory
-from py2neo import Graph, Node, Relationship
-from py2neo.bulk import create_nodes, create_relationships, merge_nodes
-from py2neo.matching import RelationshipMatcher, NodeMatcher, CONTAINS, LIKE, OR, IN
-import neotime
 import ast
 import re
+from datetime import datetime
+
+import neotime
+from logger import LoggerFactory
+from py2neo import Graph
+from py2neo import Node
+from py2neo import Relationship
+from py2neo.bulk import create_nodes
+from py2neo.bulk import create_relationships
+from py2neo.bulk import merge_nodes
+from py2neo.matching import IN
+from py2neo.matching import LIKE
+from py2neo.matching import NodeMatcher
+from py2neo.matching import RelationshipMatcher
+
+from config import ConfigClass
+from neo4j_api import neo4j_connection
 
 
 class Neo4jClient(object):
 
     def __init__(self):
-        self._logger = SrvLoggerFactory('api_invitation').get_logger()
+        self._logger = LoggerFactory('api_invitation').get_logger()
         try:
             self.graph = Graph(
                 ConfigClass.NEO4J_URL,

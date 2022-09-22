@@ -1,3 +1,23 @@
+# Copyright 2022 Indoc Research
+# 
+# Licensed under the EUPL, Version 1.2 or – as soon they
+# will be approved by the European Commission - subsequent
+# versions of the EUPL (the "Licence");
+# You may not use this work except in compliance with the
+# Licence.
+# You may obtain a copy of the Licence at:
+# 
+# https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+# 
+# Unless required by applicable law or agreed to in
+# writing, software distributed under the Licence is
+# distributed on an "AS IS" basis,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied.
+# See the Licence for the specific language governing
+# permissions and limitations under the Licence.
+# 
+
 from neo4j_api.neo4j_base import Neo4jNode
 from config import ConfigClass
 import requests
@@ -52,10 +72,7 @@ class SetUpTest:
         file_type = file_event.get('file_type')
         namespace = file_event.get('namespace')
         project_code = file_event.get('project_code')
-        if namespace == 'vrecore':
-            path = f"/vre-data/{project_code}/{file_type}"
-        else:
-            path = f"/data/vre-storage/{project_code}/{file_type}"
+        path = "/"
         payload = {
                       "uploader": "EntityInfoUnittest",
                       "file_name": filename,
@@ -66,14 +83,14 @@ class SetUpTest:
                       "data_type": file_type,
                       "labels": ['unittest'],
                       "project_code": project_code,
-                      "generate_id": "",
+                      "dcm_id": "",
                       "process_pipeline": "",
                       "operator": "EntityInfoUnittest",
                       "parent_query": {}
                     }
         if file_event.get("parent_geid"):
             payload["parent_folder_geid"] = file_event.get("parent_geid")
-        testing_api = ConfigClass.DATAOPS + '/v1/filedata/'
+        testing_api = ConfigClass.DATA_OPS_UTIL + '/v1/filedata/'
         try:
             self.log.info(f'POST API: {testing_api}')
             self.log.info(f'POST API: {payload}')

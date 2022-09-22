@@ -1,3 +1,23 @@
+# Copyright 2022 Indoc Research
+# 
+# Licensed under the EUPL, Version 1.2 or – as soon they
+# will be approved by the European Commission - subsequent
+# versions of the EUPL (the "Licence");
+# You may not use this work except in compliance with the
+# Licence.
+# You may obtain a copy of the Licence at:
+# 
+# https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+# 
+# Unless required by applicable law or agreed to in
+# writing, software distributed under the Licence is
+# distributed on an "AS IS" basis,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied.
+# See the Licence for the specific language governing
+# permissions and limitations under the Licence.
+# 
+
 import unittest
 import copy
 from tests.logger import Logger
@@ -795,11 +815,11 @@ class TestNeo4jDatasetUserRelation(unittest.TestCase):
             self.log.info(f"COMPARING p start_node children node id: "
                           f"{p[start_name]['children'][end_name]['id']} VS {self.end_node_id}")
             self.assertEqual(p[start_name]['children'][end_name]['id'], self.end_node_id)
-            
+
             r = res['r']
             self.log.info(f"COMPARING r type: {r['type']} VS {self.relation_label}")
             self.assertEqual(r['type'], self.relation_label)
-            
+
             start_node = res['start_node']
             self.log.info(f"COMPARING start_node id: {start_node['id']} VS {self.start_node_id}")
             self.assertEqual(start_node['id'], self.start_node_id)
@@ -1234,9 +1254,9 @@ class TestNeo4jDatasetFileRelation(TestNeo4jDatasetUserRelation):
             "archived": False,
             "process_pipeline": "",
             "uploader": "amy11",
-            "generate_id": "undefined"
+            "dcm_id": "undefined"
     }
-    end_param = copy.deepcopy(end_node_attribute) 
+    end_param = copy.deepcopy(end_node_attribute)
     end_param.pop("extra_labels")
     start_node_id = None
     end_node_id = None
@@ -1249,7 +1269,7 @@ class TestNeo4jDatasetFileRelation(TestNeo4jDatasetUserRelation):
         cls.log = cls.test.log
         cls.app = cls.test.app
         cls.log.info("Preparing test".ljust(80, '-'))
-        path = "/data/vre-storage/"
+        path = "/"
         try:
             cls.start_node_id = cls.test.create_node(cls.start_node_label, cls.start_node_attribute)
             cls.end_node_attribute["path"] = path  + cls.start_node_attribute['path'] + "/raw"
@@ -1293,7 +1313,7 @@ class TestNeo4jUserFolderRelation(TestNeo4jDatasetFileRelation):
                 "tag1"
             ]
     }
-    end_param = copy.deepcopy(end_node_attribute) 
+    end_param = copy.deepcopy(end_node_attribute)
     start_node_id = None
     end_node_id = None
     container_id = None

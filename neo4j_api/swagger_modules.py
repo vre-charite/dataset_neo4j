@@ -1,3 +1,23 @@
+# Copyright 2022 Indoc Research
+# 
+# Licensed under the EUPL, Version 1.2 or – as soon they
+# will be approved by the European Commission - subsequent
+# versions of the EUPL (the "Licence");
+# You may not use this work except in compliance with the
+# Licence.
+# You may obtain a copy of the Licence at:
+# 
+# https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+# 
+# Unless required by applicable law or agreed to in
+# writing, software distributed under the Licence is
+# distributed on an "AS IS" basis,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied.
+# See the Licence for the specific language governing
+# permissions and limitations under the Licence.
+# 
+
 from flask_restx import Api, Resource, fields
 
 from . import module_api
@@ -96,7 +116,7 @@ labels_module = module_api.model('labels_change', {
 file_module = module_api.model('file_create', {
      "file_size": fields.Integer(description="file_size in bytes"),
      "full_path": fields.String(description="full_path to file"),
-     "generate_id": fields.String(description="generate_id"),
+     "dcm_id": fields.String(description="dcm_id"),
      "guid": fields.String(description="guid from atlas"),
      "namespace": fields.String(description="greenroom or core"),
      "type": fields.String(description="raw or processed"),
@@ -110,8 +130,8 @@ query = module_api.model('file_query', {
     'archived': fields.Boolean(),
     'description': fields.String(example="description"),
     'file_size': fields.Integer(),
-    'full_path': fields.String(example="/data/vre-storage/tvb/raw/test_seeds"),
-    'generate_id': fields.String(),
+    'full_path': fields.String(example="/data/storage/raw/test_seeds"),
+    'dcm_id': fields.String(),
     'guid': fields.String(example="f1547da2-8372-4ae3-9e2b-17c80e97f113"),
     'name': fields.String(example="testzy9.txt"),
     'path': fields.String(example="test/zy"),
@@ -133,8 +153,8 @@ node_query = module_api.model('query', {
     'archived': fields.Boolean(),
     'description': fields.String(example="description"),
     'file_size': fields.Integer(),
-    'full_path': fields.String(example="/data/vre-storage/tvb/raw/test_seeds"),
-    'generate_id': fields.String(),
+    'full_path': fields.String(example="/data/storage/raw/test_seeds"),
+    'dcm_id': fields.String(),
     'guid': fields.String(example="f1547da2-8372-4ae3-9e2b-17c80e97f113"),
     'name': fields.String(example="testzy9.txt"),
     'path': fields.String(example="test/zy"),

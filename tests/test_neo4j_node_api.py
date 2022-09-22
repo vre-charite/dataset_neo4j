@@ -1,3 +1,23 @@
+# Copyright 2022 Indoc Research
+# 
+# Licensed under the EUPL, Version 1.2 or – as soon they
+# will be approved by the European Commission - subsequent
+# versions of the EUPL (the "Licence");
+# You may not use this work except in compliance with the
+# Licence.
+# You may obtain a copy of the Licence at:
+# 
+# https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+# 
+# Unless required by applicable law or agreed to in
+# writing, software distributed under the Licence is
+# distributed on an "AS IS" basis,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied.
+# See the Licence for the specific language governing
+# permissions and limitations under the Licence.
+# 
+
 import unittest
 import sys
 import json
@@ -38,7 +58,7 @@ def setUpModule():
 class TestNeo4jDataset(unittest.TestCase):
     # some node properties
     label = "Container"
-    #dataset for put, get 
+    #dataset for put, get
     dataset_id = None
     #update label
     update_dataset_id = None
@@ -137,7 +157,7 @@ class TestNeo4jDataset(unittest.TestCase):
         cls.test.delete_node(cls.update_dataset_id, cls.label)
         cls.test.delete_node(cls.dataset_id2, cls.label)
         #cls.test.delete_node(cls.delete_dataset_id, cls.label)
-    
+
     def setUp(self):
         if self.label == "User":
             self.skip_condition = False
@@ -213,7 +233,7 @@ class TestNeo4jDataset(unittest.TestCase):
             self.log.error(e)
             raise e
 
-    
+
     #@unittest.skip
     def test_02_0_update_dataset(self):
         self.log.info("\n")
@@ -254,7 +274,7 @@ class TestNeo4jDataset(unittest.TestCase):
         except Exception as e:
             self.log.error(e)
             raise e
-    
+
 
     #@skipIfTrue("skip_condition")
     @unittest.skip("seems to be broken")
@@ -268,7 +288,7 @@ class TestNeo4jDataset(unittest.TestCase):
             self.log.info(f"GET RESPONSE: {res}")
             self.log.info(f"COMPARING: {res.status_code} VS {200}")
             self.assertEqual(res.status_code, 200)
-            response = res.json 
+            response = res.json
             #self.log.info(f"GET RESPONSE JSON: {response}")
             code_total = len(response[self.property_key[0]])
             id_total = len(response[self.property_key[1]])
@@ -314,7 +334,7 @@ class TestNeo4jDataset(unittest.TestCase):
 
 
     #@skipIfTrue("skip_condition")
-    def test_03_3_get_all_datasets_properties_with_int_label(self): 
+    def test_03_3_get_all_datasets_properties_with_int_label(self):
         self.log.info("\n")
         self.log.info('03.2'+f'test get all {self.label} properties'.center(80, '-'))
         int_label = 14159265
@@ -363,7 +383,7 @@ class TestNeo4jDataset(unittest.TestCase):
             self.log.error(e)
             raise e
 
-    
+
     #@unittest.skip
     def test_05_0_delete_dataset(self):
         self.log.info("\n")
@@ -399,7 +419,7 @@ class TestNeo4jDataset(unittest.TestCase):
         except Exception as e:
             self.log.error(e)
             raise e
-    
+
     #@unittest.skip
     def test_06_0_get_dataset(self):
         self.log.info("\n")
@@ -421,7 +441,7 @@ class TestNeo4jDataset(unittest.TestCase):
         except Exception as e:
             self.log.error(e)
             raise e
-    
+
     @unittest.skip
     def test_06_1_get_deleted_dataset(self):
         self.log.info("\n")
@@ -470,13 +490,13 @@ class TestNeo4jDataset(unittest.TestCase):
         self.log.info(f"RESPONSE DATA: {res.data}")
         self.assertEqual(res.status_code, 200)
         self.assertIn(len(res.json["result"]), 1)
- 
+
 
 #@unittest.skip('not used for now')
 class TestNeo4jUsers(TestNeo4jDataset):
     # some node properties
     label = "User"
-    #dataset for put, get 
+    #dataset for put, get
     dataset_id = None
     #update label
     update_dataset_id = None
@@ -653,7 +673,7 @@ class TestNeo4jUsers(TestNeo4jDataset):
         except Exception as e:
             self.log.error(e)
             raise e
-    
+
     @unittest.skip("seems to be broken")
     def test_07_4_count_single_email(self):
         self.log.info("\n")
@@ -683,7 +703,7 @@ class TestNeo4jUsers(TestNeo4jDataset):
         self.log.info("\n")
         self.log.info('08'+ f'test the listing of {self.label}'.center(80, '-'))
         testing_api = "/v1/neo4j/nodes/%s/query" % self.label
-        self.log.info(f"GET API: {testing_api}") 
+        self.log.info(f"GET API: {testing_api}")
         query_load = {
             "name": self.payload["name"]
         }
@@ -707,13 +727,13 @@ class TestNeo4jUsers(TestNeo4jDataset):
                 self.assertEqual(self.payload[x], result_response.get(x, None))
         except Exception as e:
             self.log.error(e)
-            raise e    
+            raise e
 
 #@unittest.skip('not used for now')
 class TestNeo4jFiles(TestNeo4jUsers):
     # some node properties
     label = "File"
-    #dataset for put, get 
+    #dataset for put, get
     dataset_id = None
     #update label
     update_dataset_id = None
@@ -741,9 +761,9 @@ class TestNeo4jFiles(TestNeo4jUsers):
             "archived": False,
             "process_pipeline": "",
             "uploader": "amy11",
-            "generate_id": "undefined"
-            #"path": "/data/vre-storage/indoctestproject/processed/straight_copy",
-            #"full_path": "/data/vre-storage/indoctestproject/processed/straight_copy/10.3.7.220_workbench_indoctestproject_guacamole_.png",        
+            "dcm_id": "undefined"
+            #"path": "/data/storage/indoctestproject/processed/straight_copy",
+            #"full_path": "/data/storage/indoctestproject/processed/straight_copy/10.3.7.220_workbench_indoctestproject_guacamole_.png",
         }
 
     updated_payload = {
@@ -762,7 +782,7 @@ class TestNeo4jFiles(TestNeo4jUsers):
             "archived": False,
             "process_pipeline": "",
             "uploader": "amy11",
-            "generate_id": "undefined"
+            "dcm_id": "undefined"
     }
 
     update_attribute = {
@@ -786,8 +806,8 @@ class TestNeo4jFiles(TestNeo4jUsers):
                 "operator": "amy11",
                 "file_size": 7120,
                 "labels": [
-                "Greenroom", 
-                "Raw", 
+                "Greenroom",
+                "Raw",
                 "File"
                     ]
                 }
@@ -804,7 +824,7 @@ class TestNeo4jFiles(TestNeo4jUsers):
         cls.app = cls.test.app
         #self.node_id = self.test.create_node(self.label, self.attribute)
         cls.log.info("Preparing test".ljust(80, '-'))
-        path = "/data/vre-storage/"
+        path = "/"
         try:
             # create node for dataset_id
             cls.create_dataset = cls.test.create_node("Container", cls.dataset_payload)
@@ -841,7 +861,7 @@ class TestNeo4jFiles(TestNeo4jUsers):
         self.log.info('01'+f'test create {self.label}'.center(80, '-'))
         testing_api = "/v1/neo4j/nodes/%s" % self.label
         self.log.info(f"POST API: {testing_api}")
-        path = "/data/vre-storage/"
+        path = "/"
         try:
             self.attribute["path"] = path + self.dataset_payload['path'] + "/raw"
             self.attribute["full_path"] = self.attribute["path"] + "/" + self.attribute["name"]

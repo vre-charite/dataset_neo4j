@@ -78,7 +78,7 @@ pytest-mock = "3.6.1"
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[[tool.poetry.source]]
+[tool.poetry.source]
 name = "pilot"
 url = "https://git.bihealth.org/api/v4/groups/vre/-/packages/pypi/simple"
 default = true

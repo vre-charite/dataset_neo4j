@@ -1,8 +1,8 @@
 image: docker:latest
 
 variables:
-  REGISTRY: s-hdp-vre-v007.charite.de
-  CONTAINER_IMAGE: ${REGISTRY}/neo4j:${CI_COMMIT_SHORT_SHA}
+  REGISTRY: registry.bihealth.org
+  CONTAINER_IMAGE: ${REGISTRY}/vre/dataset_neo4j:${CI_COMMIT_SHORT_SHA}
   TARGET_RELEASE: dataset-neo4j
 
 build:

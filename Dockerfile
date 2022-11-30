@@ -39,3 +39,4 @@ RUN poetry install --no-dev --no-root --no-interaction
 RUN chmod +x gunicorn_starter.sh
 
 CMD ["./gunicorn_starter.sh"]
+

@@ -32,7 +32,7 @@ apt-get install -y vim-tiny less && ln -s /usr/bin/vim.tiny /usr/bin/vim && rm -
 
 COPY . .
 
-RUN pip install --no-cache-dir poetry==1.1.12
+RUN pip install --no-cache-dir poetry
 RUN poetry config virtualenvs.create false && poetry config http-basic.pilot chencha nM9VbfhirWrWbHZQ64hi
 RUN poetry install --no-dev --no-root --no-interaction
 

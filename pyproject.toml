@@ -6,7 +6,7 @@ authors = ["Indoc Research"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
-common = "0.0.12"
+common = "0.0.19"
 logger = "0.1.0"
 aniso8601 = "8.0.0"
 attrs = "19.3.0"
@@ -18,7 +18,7 @@ cryptography = "35.0.0"
 Deprecated = "1.2.13"
 docker = "5.0.3"
 english = "2020.7.0"
-Flask = "1.1.2"
+Flask = "1.1.4"
 Flask-Cors = "3.0.8"
 flask-restx = "0.2.0"
 googleapis-common-protos = "1.53.0"
@@ -78,7 +78,7 @@ pytest-mock = "3.6.1"
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry.source]
+[[tool.poetry.source]]
 name = "pilot"
 url = "https://git.bihealth.org/api/v4/groups/vre/-/packages/pypi/simple"
 default = true
